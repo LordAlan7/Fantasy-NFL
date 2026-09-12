@@ -1,0 +1,77 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Gestión de Usuarios</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+
+  <div class="contenedor-usuarios">
+
+    <!-- Panel del formulario: crear o editar -->
+    <div class="panel-formulario">
+      <h3>{{ editando ? 'Editar usuario' : 'Nuevo usuario' }}</h3>
+
+      <form (ngSubmit)="guardarUsuario(usuarioForm)" #usuarioForm="ngForm">
+        <p>
+          <label>Email</label>
+          <input
+            type="email"
+            name="email"
+            [(ngModel)]="formUsuario.email"
+            required
+          >
+        </p>
+        <p>
+          <label>{{ editando ? 'Nueva contraseña (opcional)' : 'Contraseña' }}</label>
+          <input
+            type="password"
+            name="password"
+            [(ngModel)]="formUsuario.password"
+            [required]="!editando"
+          >
+        </p>
+
+        <p class="mensaje-exito" *ngIf="mensajeExito">{{ mensajeExito }}</p>
+        <p class="mensaje-error" *ngIf="mensajeError">{{ mensajeError }}</p>
+
+        <div class="acciones-form">
+          <ion-button type="submit" [disabled]="usuarioForm.invalid || guardando">
+            {{ guardando ? 'Guardando...' : (editando ? 'Actualizar' : 'Crear usuario') }}
+          </ion-button>
+
+          <ion-button fill="outline" type="button" *ngIf="editando" (click)="cancelarEdicion(usuarioForm)">
+            Cancelar
+          </ion-button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Panel de la lista de usuarios -->
+    <div class="panel-lista">
+      <h3>Usuarios registrados</h3>
+
+      <p *ngIf="cargando">Cargando usuarios...</p>
+
+      <ion-list *ngIf="!cargando && usuarios.length > 0">
+        <ion-item *ngFor="let usuario of usuarios">
+          <ion-label>
+            <h2>{{ usuario.email }}</h2>
+            <p>ID: {{ usuario.id }} · Creado: {{ usuario.created_at }}</p>
+          </ion-label>
+
+          <ion-button fill="clear" (click)="editarUsuario(usuario)">
+            Editar
+          </ion-button>
+          <ion-button fill="clear" color="danger" (click)="eliminarUsuario(usuario)">
+            Eliminar
+          </ion-button>
+        </ion-item>
+      </ion-list>
+
+      <p *ngIf="!cargando && usuarios.length === 0">No hay usuarios registrados.</p>
+    </div>
+
+  </div>
+
+</ion-content>

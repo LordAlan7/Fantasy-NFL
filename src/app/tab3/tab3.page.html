@@ -1,0 +1,73 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-title>🏈 Mi Equipo Fantasy</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">Mi Equipo Fantasy</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  @if (mensaje) {
+    <div class="mensaje {{ mensajeTipo }}">{{ mensaje }}</div>
+  }
+
+  <!-- ROSTER -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Mi equipo ({{ roster.length }} jugadores)</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (roster.length > 0) {
+        <ion-list>
+          @for (j of roster; track j.id) {
+            <ion-item>
+              <ion-label>
+                <h2>{{ j.player_name }}</h2>
+                <p>{{ j.team }} · {{ j.position }}</p>
+              </ion-label>
+              <ion-note slot="end">{{ j.puntos }} pts</ion-note>
+              <ion-button slot="end" color="danger" size="small"
+                          (click)="quitar(j.id, j.player_name)">
+                Quitar
+              </ion-button>
+            </ion-item>
+          }
+        </ion-list>
+      } @else {
+        <p class="vacio">Tu equipo está vacío. Agrega jugadores desde la lista de abajo.</p>
+      }
+      <p class="total">Total del equipo: {{ totalPuntos }} pts</p>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- CATÁLOGO -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Jugadores disponibles</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-searchbar placeholder="Buscar por nombre o equipo..."
+                     (ionInput)="filtrar($event)"></ion-searchbar>
+      <ion-list>
+        @for (j of jugadoresFiltrados; track j.id) {
+          <ion-item>
+            <ion-label>
+              <h2>{{ j.player_name }}</h2>
+              <p>{{ j.team }} · {{ j.conference }} {{ j.division }}</p>
+            </ion-label>
+            <ion-note slot="end">{{ j.puntos }} pts</ion-note>
+            <ion-button slot="end" color="success" size="small"
+                        [disabled]="estaEnEquipo(j.id)"
+                        (click)="agregar(j.id)">
+              {{ estaEnEquipo(j.id) ? 'En tu equipo' : 'Agregar' }}
+            </ion-button>
+          </ion-item>
+        }
+      </ion-list>
+    </ion-card-content>
+  </ion-card>
+</ion-content>
