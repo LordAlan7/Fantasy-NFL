@@ -1,0 +1,63 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Jugadores Fantasy NFL</ion-title>
+    <ion-badge color="success" slot="end" style="margin-right:12px">
+      <ion-icon name="american-football-outline"></ion-icon>
+      Local Storage
+    </ion-badge>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="contenedor-jugadores">
+    <div class="panel-formulario">
+      <h3>{{ editando ? 'Editar Jugador' : 'Nuevo Jugador' }}</h3>
+
+      <form (ngSubmit)="guardarJugador(jugadorForm)" #jugadorForm="ngForm">
+        <p>
+          <label>Nombre</label>
+          <input type="text" name="nombre" [(ngModel)]="formJugador.nombre" required>
+        </p>
+        <p>
+          <label>Posición</label>
+          <input type="text" name="posicion" [(ngModel)]="formJugador.posicion" required>
+        </p>
+        <p>
+          <label>Equipo</label>
+          <input type="text" name="equipo" [(ngModel)]="formJugador.equipo" required>
+        </p>
+
+        <p class="mensaje-exito" *ngIf="mensajeExito">{{ mensajeExito }}</p>
+        <p class="mensaje-error" *ngIf="mensajeError">{{ mensajeError }}</p>
+
+        <div class="acciones-form">
+          <ion-button type="submit" [disabled]="jugadorForm.invalid || guardando">
+            {{ guardando ? 'Guardando...' : (editando ? 'Actualizar' : 'Agregar Jugador') }}
+          </ion-button>
+          <ion-button fill="outline" type="button" *ngIf="editando" (click)="cancelarEdicion(jugadorForm)">
+            Cancelar
+          </ion-button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel-lista">
+      <h3>Roster ({{ jugadores.length }})</h3>
+
+      <p *ngIf="cargando">Cargando jugadores...</p>
+
+      <ion-list *ngIf="!cargando && jugadores.length > 0">
+        <ion-item *ngFor="let jugador of jugadores">
+          <ion-label>
+            <h2>{{ jugador.nombre }} ({{ jugador.posicion }})</h2>
+            <p>ID: {{ jugador.id }} · Equipo: {{ jugador.equipo }}</p>
+          </ion-label>
+          <ion-button fill="clear" (click)="editarJugador(jugador)">Editar</ion-button>
+          <ion-button fill="clear" color="danger" (click)="eliminarJugador(jugador)">Eliminar</ion-button>
+        </ion-item>
+      </ion-list>
+
+      <p *ngIf="!cargando && jugadores.length === 0">No hay jugadores registrados. Agrega uno.</p>
+    </div>
+  </div>
+</ion-content>
