@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { IonHeader, IonToolbar, IonTitle, IonContent, ToastController } from '@ionic/angular';
+import { IonHeader, IonToolbar, IonTitle, IonContent, ToastController, IonList, IonItem, IonLabel, IonInput, IonButton } from '@ionic/angular';
 import axios from 'axios';
 import { StorageService } from '../services/storage.service';
 
@@ -17,7 +17,12 @@ import { StorageService } from '../services/storage.service';
     IonHeader,
     IonToolbar,
     IonTitle,
-    IonContent
+    IonContent,
+    IonList,
+    IonItem,
+    IonLabel,
+    IonInput,
+    IonButton
   ],
 })
 export class LoginPage {
@@ -26,7 +31,7 @@ export class LoginPage {
     password: ''
   };
 
-  private apiUrl = 'http://127.0.0.1/api/login.php';
+  private apiUrl = 'http://localhost/apis/login.php';
 
   constructor(
     private toastController: ToastController,
@@ -34,24 +39,26 @@ export class LoginPage {
     private storage: StorageService
   ) {}
 
-  // Usamos Capacitor Preferences para guardar la sesión de forma persistente
   async login(): Promise<void> {
     try {
-      if (this.user.email && this.user.password) {
-        // Persistir sesión con Capacitor Preferences (sobrevive cierres de app)
+      const response = await axios.post(this.apiUrl, this.user);
+      if (response.data.success) {
         await this.storage.set('isLoggedIn', true);
-        await this.storage.set('user_id', 1);
-        // Mantener localStorage como fallback para AuthGuard síncrono en web
+        await this.storage.set('user_id', response.data.user_id);
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('user_id', '1');
+        localStorage.setItem('user_id', String(response.data.user_id));
 
-        await this.presentToast('Login offline exitoso');
+        await this.presentToast('Login exitoso');
         this.router.navigateByUrl('/tabs/tab1');
       } else {
-        await this.presentToast('Ingrese cualquier usuario y contraseña');
+        await this.presentToast('Error: ' + response.data.message);
       }
     } catch (error: any) {
-      await this.presentToast('Error al iniciar sesión local');
+      if (error.response && error.response.data && error.response.data.message) {
+        await this.presentToast(error.response.data.message);
+      } else {
+        await this.presentToast('Error de conexión con el servidor de la BD');
+      }
     }
   }
 

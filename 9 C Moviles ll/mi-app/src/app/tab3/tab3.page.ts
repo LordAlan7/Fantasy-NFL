@@ -1,170 +1,181 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule, NgForm } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import {
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonList,
-  IonItem,
-  IonLabel,
-  IonButton,
-  IonBadge,
-  IonIcon,
+  IonHeader, IonToolbar, IonTitle, IonContent,
+  IonCard, IonCardHeader, IonCardTitle, IonCardContent,
+  IonList, IonItem, IonLabel, IonNote, IonButton, IonSearchbar,
+  IonBadge, IonIcon,
 } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
 import { addIcons } from 'ionicons';
-import { americanFootballOutline, cloudDoneOutline } from 'ionicons/icons';
+import { cloudOfflineOutline, cloudDoneOutline } from 'ionicons/icons';
 import { StorageService } from '../services/storage.service';
+import { firstValueFrom } from 'rxjs';
 
-const STORAGE_KEY = 'tab3_jugadores_fantasy';
-
-export interface Jugador {
+interface Jugador {
   id: number;
-  nombre: string;
-  posicion: string;
-  equipo: string;
-  created_at: string;
+  player_name: string;
+  team: string;
+  conference: string;
+  division: string;
+  position: string;
+  puntos: number;
 }
+
+// Claves de almacenamiento en Preferences
+const KEY_ROSTER    = 'tab3_roster';
+const KEY_JUGADORES = 'tab3_jugadores';
+const KEY_TOTAL     = 'tab3_total_puntos';
 
 @Component({
   selector: 'app-tab3',
   templateUrl: 'tab3.page.html',
   styleUrls: ['tab3.page.scss'],
+  standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
-    IonContent,
-    IonList,
-    IonItem,
-    IonLabel,
-    IonButton,
-    IonBadge,
-    IonIcon,
+    IonHeader, IonToolbar, IonTitle, IonContent,
+    IonCard, IonCardHeader, IonCardTitle, IonCardContent,
+    IonList, IonItem, IonLabel, IonNote, IonButton, IonSearchbar,
+    IonBadge, IonIcon,
   ],
 })
 export class Tab3Page implements OnInit {
+
+  // Ruta a tu API online local
+  private api = 'http://localhost/apis/my_equipo.php';
+
+  roster: Jugador[] = [];
   jugadores: Jugador[] = [];
-  cargando = false;
+  jugadoresFiltrados: Jugador[] = [];
+  totalPuntos = 0;
 
-  formJugador = {
-    id: null as number | null,
-    nombre: '',
-    posicion: '',
-    equipo: ''
-  };
+  desdeCache = false;
 
-  editando = false;
-  guardando = false;
-  mensajeExito = '';
-  mensajeError = '';
+  mensaje = '';
+  mensajeTipo = 'ok';
+  private msgTimer: any;
 
-  constructor(private storage: StorageService) {
-    addIcons({ americanFootballOutline, cloudDoneOutline });
+  constructor(
+    private http: HttpClient,
+    private storage: StorageService
+  ) {
+    addIcons({ cloudOfflineOutline, cloudDoneOutline });
   }
 
   ngOnInit(): void {
-    this.cargarJugadores();
+    this.cargar();
   }
 
-  async cargarJugadores(): Promise<void> {
-    this.cargando = true;
-    this.mensajeError = '';
-
-    try {
-      const cached = await this.storage.get<Jugador[]>(STORAGE_KEY);
-      this.jugadores = cached || [];
-    } catch (error) {
-      console.error('Error al cargar jugadores desde almacenamiento local', error);
-      this.mensajeError = 'Error al cargar los datos guardados.';
-      this.jugadores = [];
-    } finally {
-      this.cargando = false;
-    }
+  private get userId(): number {
+    return Number(localStorage.getItem('user_id') || 0);
   }
 
-  editarJugador(jugador: Jugador): void {
-    this.editando = true;
-    this.formJugador = { 
-        id: jugador.id, 
-        nombre: jugador.nombre, 
-        posicion: jugador.posicion, 
-        equipo: jugador.equipo 
-    };
-    this.mensajeExito = '';
-    this.mensajeError = '';
-  }
+  async cargar(): Promise<void> {
+    this.desdeCache = false;
 
-  cancelarEdicion(form?: NgForm): void {
-    this.editando = false;
-    this.formJugador = { id: null, nombre: '', posicion: '', equipo: '' };
-    if (form) {
-      form.resetForm();
-    }
-  }
-
-  async guardarJugador(form: NgForm): Promise<void> {
-    if (form.invalid) {
+    if (!this.userId) {
+      this.mostrarMensaje('No se encontró el usuario. Inicia sesión de nuevo.', 'error');
       return;
     }
 
-    this.guardando = true;
-    this.mensajeExito = '';
-    this.mensajeError = '';
-
     try {
-      if (this.editando && this.formJugador.id !== null) {
-        this.jugadores = this.jugadores.map(j =>
-          j.id === this.formJugador.id 
-            ? { ...j, nombre: this.formJugador.nombre, posicion: this.formJugador.posicion, equipo: this.formJugador.equipo } 
-            : j
-        );
-        await this.storage.set<Jugador[]>(STORAGE_KEY, this.jugadores);
-        this.mensajeExito = 'Jugador actualizado correctamente.';
-      } else {
-        const nuevoJugador: Jugador = {
-          id: Date.now(),
-          nombre: this.formJugador.nombre,
-          posicion: this.formJugador.posicion,
-          equipo: this.formJugador.equipo,
-          created_at: new Date().toISOString(),
-        };
-        this.jugadores = [...this.jugadores, nuevoJugador];
-        await this.storage.set<Jugador[]>(STORAGE_KEY, this.jugadores);
-        this.mensajeExito = 'Jugador creado correctamente.';
-      }
+      const data = await firstValueFrom(
+        this.http.get<any>(`${this.api}?user_id=${this.userId}`)
+      );
 
-      this.cancelarEdicion(form);
-    } catch (error: any) {
-      console.error('Error al guardar jugador', error);
-      this.mensajeError = 'Ocurrió un error al guardar usando la persistencia local.';
-    } finally {
-      this.guardando = false;
+      this.roster      = data.roster;
+      this.jugadores   = data.jugadores;
+      this.totalPuntos = data.total_puntos;
+      this.filtrarLista('');
+
+      // Persistir en Preferences para uso sin conexión
+      await this.storage.set<Jugador[]>(KEY_ROSTER,    this.roster);
+      await this.storage.set<Jugador[]>(KEY_JUGADORES, this.jugadores);
+      await this.storage.set<number>  (KEY_TOTAL,      this.totalPuntos);
+
+    } catch (err) {
+      console.warn('API no disponible, cargando equipo desde caché...', err);
+      await this.cargarDesdeCache();
     }
   }
 
-  async eliminarJugador(jugador: Jugador): Promise<void> {
-    const confirmado = window.confirm(`¿Seguro que deseas eliminar a ${jugador.nombre}?`);
-    if (!confirmado) {
-      return;
+  private async cargarDesdeCache(): Promise<void> {
+    const rosterCached    = await this.storage.get<Jugador[]>(KEY_ROSTER);
+    const jugadoresCached = await this.storage.get<Jugador[]>(KEY_JUGADORES);
+    const totalCached     = await this.storage.get<number>(KEY_TOTAL);
+
+    if (rosterCached !== null || jugadoresCached !== null) {
+      this.roster      = rosterCached    ?? [];
+      this.jugadores   = jugadoresCached ?? [];
+      this.totalPuntos = totalCached     ?? 0;
+      this.filtrarLista('');
+      this.desdeCache = true;
+    } else {
+      this.mostrarMensaje('Sin conexión y sin datos en caché.', 'error');
     }
+  }
 
-    this.mensajeExito = '';
-    this.mensajeError = '';
+  filtrar(ev: any): void {
+    const texto = (ev?.detail?.value ?? '').toLowerCase().trim();
+    this.filtrarLista(texto);
+  }
 
-    try {
-      this.jugadores = this.jugadores.filter(j => j.id !== jugador.id);
-      await this.storage.set<Jugador[]>(STORAGE_KEY, this.jugadores);
-      this.mensajeExito = 'Jugador eliminado temporal y permanentemente con éxito.';
+  private filtrarLista(texto: string): void {
+    this.jugadoresFiltrados = this.jugadores.filter(j =>
+      !texto || j.player_name.toLowerCase().includes(texto)
+             || j.team.toLowerCase().includes(texto));
+  }
 
-      if (this.formJugador.id === jugador.id) {
-        this.cancelarEdicion();
-      }
-    } catch(e) {
-      this.mensajeError = 'Ocurrió un error al intentar eliminar el jugador del almacenamiento local.';
-    }
+  estaEnEquipo(id: number): boolean {
+    return this.roster.some(j => j.id === id);
+  }
+
+  agregar(playerId: number): void {
+    this.http.post<any>(this.api, {
+      user_id: this.userId,
+      player_id: playerId,
+    }).subscribe({
+      next: async (data) => {
+        this.mostrarMensaje(data.success, 'ok');
+        // Agregar jugador al roster local y persistir
+        const jugador = this.jugadores.find(j => j.id === playerId);
+        if (jugador) {
+          this.roster = [...this.roster, jugador];
+          this.totalPuntos += jugador.puntos;
+          await this.storage.set<Jugador[]>(KEY_ROSTER, this.roster);
+          await this.storage.set<number>(KEY_TOTAL, this.totalPuntos);
+        }
+        this.desdeCache = false;
+      },
+      error: (err) => this.mostrarMensaje(err.error?.error || 'Error al agregar', 'error'),
+    });
+  }
+
+  quitar(playerId: number, nombre: string): void {
+    if (!confirm(`¿Quitar a ${nombre} de tu equipo?`)) return;
+
+    this.http.delete<any>(`${this.api}?user_id=${this.userId}&player_id=${playerId}`).subscribe({
+      next: async (data) => {
+        this.mostrarMensaje(data.success, 'ok');
+        // Quitar jugador del roster local y persistir
+        const jugador = this.roster.find(j => j.id === playerId);
+        this.roster = this.roster.filter(j => j.id !== playerId);
+        if (jugador) {
+          this.totalPuntos -= jugador.puntos;
+        }
+        await this.storage.set<Jugador[]>(KEY_ROSTER, this.roster);
+        await this.storage.set<number>(KEY_TOTAL, this.totalPuntos);
+        this.desdeCache = false;
+      },
+      error: (err) => this.mostrarMensaje(err.error?.error || 'Error al quitar', 'error'),
+    });
+  }
+
+  private mostrarMensaje(texto: string, tipo: 'ok' | 'error'): void {
+    this.mensaje = texto;
+    this.mensajeTipo = tipo;
+    clearTimeout(this.msgTimer);
+    this.msgTimer = setTimeout(() => { this.mensaje = ''; }, 3500);
   }
 }

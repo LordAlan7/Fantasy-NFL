@@ -19,7 +19,7 @@ import axios from 'axios';
 import { StorageService } from '../services/storage.service';
 
 // Ajusta esta URL si tu carpeta del API tiene otro nombre o dominio
-const API_URL = 'http://localhost/api/users.php';
+const API_URL = 'http://localhost/apis/users.php';
 const STORAGE_KEY = 'tab1_usuarios';
 
 interface Usuario {
