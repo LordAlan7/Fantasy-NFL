@@ -22,10 +22,16 @@ interface Jugador {
   puntos: number;
 }
 
+interface OfflineAction {
+  type: 'ADD' | 'REMOVE';
+  playerId: number;
+}
+
 // Claves de almacenamiento en Preferences
 const KEY_ROSTER    = 'tab3_roster';
 const KEY_JUGADORES = 'tab3_jugadores';
 const KEY_TOTAL     = 'tab3_total_puntos';
+const KEY_OFFLINE_ACTIONS = 'tab3_offline_actions';
 
 @Component({
   selector: 'app-tab3',
@@ -80,6 +86,8 @@ export class Tab3Page implements OnInit {
     }
 
     try {
+      await this.sincronizarOffline();
+
       const data = await firstValueFrom(
         this.http.get<any>(`${this.api}?user_id=${this.userId}`)
       );
@@ -131,45 +139,100 @@ export class Tab3Page implements OnInit {
     return this.roster.some(j => j.id === id);
   }
 
-  agregar(playerId: number): void {
+  async agregar(playerId: number): Promise<void> {
+    const jugador = this.jugadores.find(j => j.id === playerId);
+    if (!jugador) return;
+
     this.http.post<any>(this.api, {
       user_id: this.userId,
       player_id: playerId,
     }).subscribe({
       next: async (data) => {
         this.mostrarMensaje(data.success, 'ok');
-        // Agregar jugador al roster local y persistir
-        const jugador = this.jugadores.find(j => j.id === playerId);
-        if (jugador) {
-          this.roster = [...this.roster, jugador];
-          this.totalPuntos += jugador.puntos;
-          await this.storage.set<Jugador[]>(KEY_ROSTER, this.roster);
-          await this.storage.set<number>(KEY_TOTAL, this.totalPuntos);
-        }
+        await this.agregarLocal(jugador);
         this.desdeCache = false;
       },
-      error: (err) => this.mostrarMensaje(err.error?.error || 'Error al agregar', 'error'),
+      error: async (err) => {
+        if (err.status === 0 || err.status === 504) {
+          this.mostrarMensaje('Jugador agregado offline', 'ok');
+          await this.agregarLocal(jugador);
+          await this.registrarAccionOffline('ADD', playerId);
+        } else {
+          this.mostrarMensaje(err.error?.error || 'Error al agregar', 'error');
+        }
+      },
     });
   }
 
-  quitar(playerId: number, nombre: string): void {
+  async quitar(playerId: number, nombre: string): Promise<void> {
     if (!confirm(`¿Quitar a ${nombre} de tu equipo?`)) return;
 
     this.http.delete<any>(`${this.api}?user_id=${this.userId}&player_id=${playerId}`).subscribe({
       next: async (data) => {
         this.mostrarMensaje(data.success, 'ok');
-        // Quitar jugador del roster local y persistir
-        const jugador = this.roster.find(j => j.id === playerId);
-        this.roster = this.roster.filter(j => j.id !== playerId);
-        if (jugador) {
-          this.totalPuntos -= jugador.puntos;
-        }
-        await this.storage.set<Jugador[]>(KEY_ROSTER, this.roster);
-        await this.storage.set<number>(KEY_TOTAL, this.totalPuntos);
+        await this.quitarLocal(playerId);
         this.desdeCache = false;
       },
-      error: (err) => this.mostrarMensaje(err.error?.error || 'Error al quitar', 'error'),
+      error: async (err) => {
+        if (err.status === 0 || err.status === 504) {
+          this.mostrarMensaje('Jugador quitado offline', 'ok');
+          await this.quitarLocal(playerId);
+          await this.registrarAccionOffline('REMOVE', playerId);
+        } else {
+          this.mostrarMensaje(err.error?.error || 'Error al quitar', 'error');
+        }
+      },
     });
+  }
+
+  private async agregarLocal(jugador: Jugador) {
+    if (!this.roster.some(j => j.id === jugador.id)) {
+      this.roster = [...this.roster, jugador];
+      this.totalPuntos += jugador.puntos;
+      await this.storage.set<Jugador[]>(KEY_ROSTER, this.roster);
+      await this.storage.set<number>(KEY_TOTAL, this.totalPuntos);
+    }
+  }
+
+  private async quitarLocal(playerId: number) {
+    const jugador = this.roster.find(j => j.id === playerId);
+    if (jugador) {
+      this.roster = this.roster.filter(j => j.id !== playerId);
+      this.totalPuntos -= jugador.puntos;
+      await this.storage.set<Jugador[]>(KEY_ROSTER, this.roster);
+      await this.storage.set<number>(KEY_TOTAL, this.totalPuntos);
+    }
+  }
+
+  private async registrarAccionOffline(type: 'ADD' | 'REMOVE', playerId: number) {
+    const acciones = (await this.storage.get<OfflineAction[]>(KEY_OFFLINE_ACTIONS)) || [];
+    acciones.push({ type, playerId });
+    await this.storage.set(KEY_OFFLINE_ACTIONS, acciones);
+  }
+
+  private async sincronizarOffline(): Promise<void> {
+    const acciones = (await this.storage.get<OfflineAction[]>(KEY_OFFLINE_ACTIONS)) || [];
+    if (acciones.length === 0) return;
+
+    for (const acc of acciones) {
+      try {
+        if (acc.type === 'ADD') {
+          await firstValueFrom(this.http.post<any>(this.api, {
+            user_id: this.userId,
+            player_id: acc.playerId,
+          }));
+        } else if (acc.type === 'REMOVE') {
+          await firstValueFrom(this.http.delete<any>(`${this.api}?user_id=${this.userId}&player_id=${acc.playerId}`));
+        }
+      } catch (err: any) {
+        if (err.status === 0 || err.status === 504) {
+          throw err;
+        }
+      }
+    }
+    
+    await this.storage.set(KEY_OFFLINE_ACTIONS, []);
+    this.mostrarMensaje('Acciones offline sincronizadas', 'ok');
   }
 
   private mostrarMensaje(texto: string, tipo: 'ok' | 'error'): void {
