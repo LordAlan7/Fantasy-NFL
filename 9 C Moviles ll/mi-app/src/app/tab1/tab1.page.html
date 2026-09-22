@@ -1,63 +1,91 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Jugadores Fantasy NFL</ion-title>
-    <ion-badge color="success" slot="end" style="margin-right:12px">
-      <ion-icon name="american-football-outline"></ion-icon>
-      Local Storage
+    <ion-title>Gestión de Usuarios</ion-title>
+    <!-- Indicador visual: datos cargados desde caché local -->
+    <ion-badge *ngIf="desdeCache" color="warning" slot="end" style="margin-right:12px">
+      <ion-icon name="cloud-offline-outline"></ion-icon>
+      Datos locales
+    </ion-badge>
+    <ion-badge *ngIf="!desdeCache && !cargando && usuarios.length > 0" color="success" slot="end" style="margin-right:12px">
+      <ion-icon name="cloud-done-outline"></ion-icon>
+      En línea
     </ion-badge>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <div class="contenedor-jugadores">
-    <div class="panel-formulario">
-      <h3>{{ editando ? 'Editar Jugador' : 'Nuevo Jugador' }}</h3>
 
-      <form (ngSubmit)="guardarJugador(jugadorForm)" #jugadorForm="ngForm">
+  <div class="contenedor-usuarios">
+
+    <!-- Aviso de modo sin conexión -->
+    <div *ngIf="desdeCache" class="banner-cache">
+      ⚠️ Sin conexión con el servidor — mostrando datos guardados localmente.
+    </div>
+
+    <!-- Panel del formulario: crear o editar -->
+    <div class="panel-formulario">
+      <h3>{{ editando ? 'Editar usuario' : 'Nuevo usuario' }}</h3>
+
+      <form (ngSubmit)="guardarUsuario(usuarioForm)" #usuarioForm="ngForm">
         <p>
-          <label>Nombre</label>
-          <input type="text" name="nombre" [(ngModel)]="formJugador.nombre" required>
+          <label>Email</label>
+          <input
+            type="email"
+            name="email"
+            [(ngModel)]="formUsuario.email"
+            required
+          >
         </p>
         <p>
-          <label>Posición</label>
-          <input type="text" name="posicion" [(ngModel)]="formJugador.posicion" required>
-        </p>
-        <p>
-          <label>Equipo</label>
-          <input type="text" name="equipo" [(ngModel)]="formJugador.equipo" required>
+          <label>{{ editando ? 'Nueva contraseña (opcional)' : 'Contraseña' }}</label>
+          <input
+            type="password"
+            name="password"
+            [(ngModel)]="formUsuario.password"
+            [required]="!editando"
+          >
         </p>
 
         <p class="mensaje-exito" *ngIf="mensajeExito">{{ mensajeExito }}</p>
         <p class="mensaje-error" *ngIf="mensajeError">{{ mensajeError }}</p>
 
         <div class="acciones-form">
-          <ion-button type="submit" [disabled]="jugadorForm.invalid || guardando">
-            {{ guardando ? 'Guardando...' : (editando ? 'Actualizar' : 'Agregar Jugador') }}
+          <ion-button type="submit" [disabled]="usuarioForm.invalid || guardando">
+            {{ guardando ? 'Guardando...' : (editando ? 'Actualizar' : 'Crear usuario') }}
           </ion-button>
-          <ion-button fill="outline" type="button" *ngIf="editando" (click)="cancelarEdicion(jugadorForm)">
+
+          <ion-button fill="outline" type="button" *ngIf="editando" (click)="cancelarEdicion(usuarioForm)">
             Cancelar
           </ion-button>
         </div>
       </form>
     </div>
 
+    <!-- Panel de la lista de usuarios -->
     <div class="panel-lista">
-      <h3>Roster ({{ jugadores.length }})</h3>
+      <h3>Usuarios registrados</h3>
 
-      <p *ngIf="cargando">Cargando jugadores...</p>
+      <p *ngIf="cargando">Cargando usuarios...</p>
 
-      <ion-list *ngIf="!cargando && jugadores.length > 0">
-        <ion-item *ngFor="let jugador of jugadores">
+      <ion-list *ngIf="!cargando && usuarios.length > 0">
+        <ion-item *ngFor="let usuario of usuarios">
           <ion-label>
-            <h2>{{ jugador.nombre }} ({{ jugador.posicion }})</h2>
-            <p>ID: {{ jugador.id }} · Equipo: {{ jugador.equipo }}</p>
+            <h2>{{ usuario.email }}</h2>
+            <p>ID: {{ usuario.id }} · Creado: {{ usuario.created_at }}</p>
           </ion-label>
-          <ion-button fill="clear" (click)="editarJugador(jugador)">Editar</ion-button>
-          <ion-button fill="clear" color="danger" (click)="eliminarJugador(jugador)">Eliminar</ion-button>
+
+          <ion-button fill="clear" (click)="editarUsuario(usuario)">
+            Editar
+          </ion-button>
+          <ion-button fill="clear" color="danger" (click)="eliminarUsuario(usuario)">
+            Eliminar
+          </ion-button>
         </ion-item>
       </ion-list>
 
-      <p *ngIf="!cargando && jugadores.length === 0">No hay jugadores registrados. Agrega uno.</p>
+      <p *ngIf="!cargando && usuarios.length === 0">No hay usuarios registrados.</p>
     </div>
+
   </div>
+
 </ion-content>

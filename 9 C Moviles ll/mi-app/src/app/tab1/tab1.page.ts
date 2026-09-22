@@ -14,16 +14,17 @@ import {
   IonIcon,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { americanFootballOutline, cloudDoneOutline } from 'ionicons/icons';
+import { cloudOfflineOutline, cloudDoneOutline } from 'ionicons/icons';
+import axios from 'axios';
 import { StorageService } from '../services/storage.service';
 
-const STORAGE_KEY = 'tab1_jugadores';
+// Ajusta esta URL si tu carpeta del API tiene otro nombre o dominio
+const API_URL = 'http://localhost/api/users.php';
+const STORAGE_KEY = 'tab1_usuarios';
 
-export interface Jugador {
+interface Usuario {
   id: number;
-  nombre: string;
-  posicion: string;
-  equipo: string;
+  email: string;
   created_at: string;
 }
 
@@ -47,66 +48,77 @@ export interface Jugador {
   ],
 })
 export class Tab1Page implements OnInit {
-  jugadores: Jugador[] = [];
+
+  usuarios: Usuario[] = [];
   cargando = false;
 
-  formJugador = {
+  /** Indica si los datos se cargaron desde caché local (sin conexión al servidor) */
+  desdeCache = false;
+
+  // Modelo del formulario (sirve tanto para crear como para editar)
+  formUsuario = {
     id: null as number | null,
-    nombre: '',
-    posicion: '',
-    equipo: ''
+    email: '',
+    password: ''
   };
 
   editando = false;
   guardando = false;
+
   mensajeExito = '';
   mensajeError = '';
 
   constructor(private storage: StorageService) {
-    addIcons({ americanFootballOutline, cloudDoneOutline });
+    addIcons({ cloudOfflineOutline, cloudDoneOutline });
   }
 
   ngOnInit(): void {
-    this.cargarJugadores();
+    this.cargarUsuarios();
   }
 
-  async cargarJugadores(): Promise<void> {
+  /** Carga usuarios desde el API; si falla, usa el caché de Preferences */
+  async cargarUsuarios(): Promise<void> {
     this.cargando = true;
     this.mensajeError = '';
+    this.desdeCache = false;
 
     try {
-      const cached = await this.storage.get<Jugador[]>(STORAGE_KEY);
-      this.jugadores = cached || [];
+      const respuesta = await axios.get(API_URL);
+      this.usuarios = respuesta.data.data;
+      // Guardar copia local exitosa
+      await this.storage.set<Usuario[]>(STORAGE_KEY, this.usuarios);
     } catch (error) {
-      console.error('Error al cargar jugadores desde almacenamiento local', error);
-      this.mensajeError = 'Error al cargar los datos guardados.';
-      this.jugadores = [];
+      console.warn('API no disponible, cargando desde caché local...', error);
+
+      const cached = await this.storage.get<Usuario[]>(STORAGE_KEY);
+      if (cached && cached.length > 0) {
+        this.usuarios = cached;
+        this.desdeCache = true;
+      } else {
+        this.mensajeError = 'Sin conexión y sin datos en caché.';
+        this.usuarios = [];
+      }
     } finally {
       this.cargando = false;
     }
   }
 
-  editarJugador(jugador: Jugador): void {
+  editarUsuario(usuario: Usuario): void {
     this.editando = true;
-    this.formJugador = { 
-        id: jugador.id, 
-        nombre: jugador.nombre, 
-        posicion: jugador.posicion, 
-        equipo: jugador.equipo 
-    };
+    this.formUsuario = { id: usuario.id, email: usuario.email, password: '' };
     this.mensajeExito = '';
     this.mensajeError = '';
   }
 
   cancelarEdicion(form?: NgForm): void {
     this.editando = false;
-    this.formJugador = { id: null, nombre: '', posicion: '', equipo: '' };
+    this.formUsuario = { id: null, email: '', password: '' };
     if (form) {
       form.resetForm();
     }
   }
 
-  async guardarJugador(form: NgForm): Promise<void> {
+  async guardarUsuario(form: NgForm): Promise<void> {
     if (form.invalid) {
       return;
     }
@@ -116,38 +128,53 @@ export class Tab1Page implements OnInit {
     this.mensajeError = '';
 
     try {
-      if (this.editando && this.formJugador.id !== null) {
-        this.jugadores = this.jugadores.map(j =>
-          j.id === this.formJugador.id 
-            ? { ...j, nombre: this.formJugador.nombre, posicion: this.formJugador.posicion, equipo: this.formJugador.equipo } 
-            : j
+      if (this.editando && this.formUsuario.id) {
+        // PATCH: solo mandamos email, y password solo si el usuario escribió una nueva
+        const body: { email: string; password?: string } = { email: this.formUsuario.email };
+        if (this.formUsuario.password) {
+          body.password = this.formUsuario.password;
+        }
+
+        await axios.patch(`${API_URL}?id=${this.formUsuario.id}`, body);
+
+        // Actualizar el usuario en la lista local y persistir
+        this.usuarios = this.usuarios.map(u =>
+          u.id === this.formUsuario.id ? { ...u, email: this.formUsuario.email } : u
         );
-        await this.storage.set<Jugador[]>(STORAGE_KEY, this.jugadores);
-        this.mensajeExito = 'Jugador actualizado correctamente.';
+        await this.storage.set<Usuario[]>(STORAGE_KEY, this.usuarios);
+        this.mensajeExito = 'Usuario actualizado correctamente.';
+        this.desdeCache = false;
       } else {
-        const nuevoJugador: Jugador = {
-          id: Date.now(),
-          nombre: this.formJugador.nombre,
-          posicion: this.formJugador.posicion,
-          equipo: this.formJugador.equipo,
+        const res = await axios.post(API_URL, {
+          email: this.formUsuario.email,
+          password: this.formUsuario.password
+        });
+
+        // Agregar el nuevo usuario con el id devuelto por el servidor
+        const nuevoUsuario: Usuario = {
+          id: res.data?.id ?? Date.now(),
+          email: this.formUsuario.email,
           created_at: new Date().toISOString(),
         };
-        this.jugadores = [...this.jugadores, nuevoJugador];
-        await this.storage.set<Jugador[]>(STORAGE_KEY, this.jugadores);
-        this.mensajeExito = 'Jugador creado correctamente.';
+        this.usuarios = [...this.usuarios, nuevoUsuario];
+        await this.storage.set<Usuario[]>(STORAGE_KEY, this.usuarios);
+        this.mensajeExito = 'Usuario creado correctamente.';
+        this.desdeCache = false;
       }
 
       this.cancelarEdicion(form);
+
     } catch (error: any) {
-      console.error('Error al guardar jugador', error);
-      this.mensajeError = 'Ocurrió un error al guardar usando la persistencia local.';
+      console.error('Error al guardar usuario', error);
+      this.mensajeError = error?.response?.data?.message
+        || 'Ocurrió un error al guardar el usuario.';
     } finally {
       this.guardando = false;
     }
   }
 
-  async eliminarJugador(jugador: Jugador): Promise<void> {
-    const confirmado = window.confirm(`¿Seguro que deseas eliminar a ${jugador.nombre}?`);
+  async eliminarUsuario(usuario: Usuario): Promise<void> {
+    const confirmado = window.confirm(`¿Seguro que deseas eliminar a ${usuario.email}?`);
     if (!confirmado) {
       return;
     }
@@ -156,15 +183,20 @@ export class Tab1Page implements OnInit {
     this.mensajeError = '';
 
     try {
-      this.jugadores = this.jugadores.filter(j => j.id !== jugador.id);
-      await this.storage.set<Jugador[]>(STORAGE_KEY, this.jugadores);
-      this.mensajeExito = 'Jugador eliminado con éxito.';
+      await axios.delete(`${API_URL}?id=${usuario.id}`);
+    } catch (error: any) {
+      // Si el API falla pero queremos eliminar del caché local de todas formas
+      console.warn('No se pudo contactar el servidor, eliminando solo localmente.', error);
+    }
 
-      if (this.formJugador.id === jugador.id) {
-        this.cancelarEdicion();
-      }
-    } catch(e) {
-      this.mensajeError = 'Ocurrió un error al intentar eliminar el jugador.';
+    // Eliminar de la lista en memoria y persistir
+    this.usuarios = this.usuarios.filter(u => u.id !== usuario.id);
+    await this.storage.set<Usuario[]>(STORAGE_KEY, this.usuarios);
+    this.mensajeExito = 'Usuario eliminado correctamente.';
+
+    // Si estabas editando al usuario que borraste, cancelar la edición
+    if (this.formUsuario.id === usuario.id) {
+      this.cancelarEdicion();
     }
   }
 }
