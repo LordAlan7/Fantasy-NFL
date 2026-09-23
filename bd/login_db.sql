@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 12-09-2026 a las 05:19:02
+-- Tiempo de generación: 23-09-2026 a las 05:06:26
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -24,23 +24,23 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `mi_equipo`
+-- Estructura de tabla para la tabla `mi_coleccion`
 --
 
-CREATE TABLE `mi_equipo` (
+CREATE TABLE `mi_coleccion` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `player_id` int(11) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `cantidad` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Volcado de datos para la tabla `mi_equipo`
+-- Volcado de datos para la tabla `mi_coleccion`
 --
 
-INSERT INTO `mi_equipo` (`id`, `user_id`, `player_id`, `created_at`) VALUES
-(3, 2, 31, '2026-09-12 03:15:36'),
-(4, 2, 32, '2026-09-12 03:15:49');
+INSERT INTO `mi_coleccion` (`id`, `user_id`, `player_id`, `created_at`, `cantidad`) VALUES
+(6, 2, 31, '2026-09-22 23:09:20', 1);
 
 -- --------------------------------------------------------
 
@@ -93,46 +93,103 @@ CREATE TABLE `players` (
   `team` varchar(50) NOT NULL,
   `conference` varchar(3) NOT NULL,
   `division` varchar(10) NOT NULL,
-  `position` varchar(5) NOT NULL DEFAULT 'QB'
+  `position` varchar(5) NOT NULL DEFAULT 'QB',
+  `puntos_semana` decimal(5,1) DEFAULT NULL,
+  `rareza` varchar(12) NOT NULL DEFAULT 'Común',
+  `estado` varchar(10) NOT NULL DEFAULT 'activo'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `players`
 --
 
-INSERT INTO `players` (`id`, `player_name`, `team`, `conference`, `division`, `position`) VALUES
-(1, 'Josh Allen', 'Buffalo Bills', 'AFC', 'East', 'QB'),
-(2, 'Drake Maye', 'New England Patriots', 'AFC', 'East', 'QB'),
-(3, 'Geno Smith', 'New York Jets', 'AFC', 'East', 'QB'),
-(4, 'Malik Willis', 'Miami Dolphins', 'AFC', 'East', 'QB'),
-(5, 'Lamar Jackson', 'Baltimore Ravens', 'AFC', 'North', 'QB'),
-(6, 'Joe Burrow', 'Cincinnati Bengals', 'AFC', 'North', 'QB'),
-(7, 'Deshaun Watson', 'Cleveland Browns', 'AFC', 'North', 'QB'),
-(8, 'Aaron Rodgers', 'Pittsburgh Steelers', 'AFC', 'North', 'QB'),
-(9, 'C.J. Stroud', 'Houston Texans', 'AFC', 'South', 'QB'),
-(10, 'Daniel Jones', 'Indianapolis Colts', 'AFC', 'South', 'QB'),
-(11, 'Trevor Lawrence', 'Jacksonville Jaguars', 'AFC', 'South', 'QB'),
-(12, 'Cam Ward', 'Tennessee Titans', 'AFC', 'South', 'QB'),
-(13, 'Bo Nix', 'Denver Broncos', 'AFC', 'West', 'QB'),
-(14, 'Patrick Mahomes', 'Kansas City Chiefs', 'AFC', 'West', 'QB'),
-(15, 'Kirk Cousins', 'Las Vegas Raiders', 'AFC', 'West', 'QB'),
-(16, 'Justin Herbert', 'Los Angeles Chargers', 'AFC', 'West', 'QB'),
-(17, 'Dak Prescott', 'Dallas Cowboys', 'NFC', 'East', 'QB'),
-(18, 'Jaxson Dart', 'New York Giants', 'NFC', 'East', 'QB'),
-(19, 'Jalen Hurts', 'Philadelphia Eagles', 'NFC', 'East', 'QB'),
-(20, 'Jayden Daniels', 'Washington Commanders', 'NFC', 'East', 'QB'),
-(21, 'Caleb Williams', 'Chicago Bears', 'NFC', 'North', 'QB'),
-(22, 'Jared Goff', 'Detroit Lions', 'NFC', 'North', 'QB'),
-(23, 'Jordan Love', 'Green Bay Packers', 'NFC', 'North', 'QB'),
-(24, 'Kyler Murray', 'Minnesota Vikings', 'NFC', 'North', 'QB'),
-(25, 'Tua Tagovailoa', 'Atlanta Falcons', 'NFC', 'South', 'QB'),
-(26, 'Bryce Young', 'Carolina Panthers', 'NFC', 'South', 'QB'),
-(27, 'Tyler Shough', 'New Orleans Saints', 'NFC', 'South', 'QB'),
-(28, 'Baker Mayfield', 'Tampa Bay Buccaneers', 'NFC', 'South', 'QB'),
-(29, 'Jacoby Brissett', 'Arizona Cardinals', 'NFC', 'West', 'QB'),
-(30, 'Matthew Stafford', 'Los Angeles Rams', 'NFC', 'West', 'QB'),
-(31, 'Brock Purdy', 'San Francisco 49ers', 'NFC', 'West', 'QB'),
-(32, 'Sam Darnold', 'Seattle Seahawks', 'NFC', 'West', 'QB');
+INSERT INTO `players` (`id`, `player_name`, `team`, `conference`, `division`, `position`, `puntos_semana`, `rareza`, `estado`) VALUES
+(1, 'Josh Allen', 'Buffalo Bills', 'AFC', 'East', 'QB', 24.5, 'Legendaria', 'activo'),
+(2, 'Drake Maye', 'New England Patriots', 'AFC', 'East', 'QB', 9.8, 'Rara', 'activo'),
+(3, 'Geno Smith', 'New York Jets', 'AFC', 'East', 'QB', 16.0, 'Rara', 'activo'),
+(4, 'Malik Willis', 'Miami Dolphins', 'AFC', 'East', 'QB', 8.0, 'Común', 'activo'),
+(5, 'Lamar Jackson', 'Baltimore Ravens', 'AFC', 'North', 'QB', 22.1, 'Legendaria', 'activo'),
+(6, 'Joe Burrow', 'Cincinnati Bengals', 'AFC', 'North', 'QB', 18.6, 'Legendaria', 'activo'),
+(7, 'Deshaun Watson', 'Cleveland Browns', 'AFC', 'North', 'QB', 12.0, 'Rara', 'activo'),
+(8, 'Aaron Rodgers', 'Pittsburgh Steelers', 'AFC', 'North', 'QB', 14.5, 'Épica', 'activo'),
+(9, 'C.J. Stroud', 'Houston Texans', 'AFC', 'South', 'QB', 17.9, 'Épica', 'activo'),
+(10, 'Daniel Jones', 'Indianapolis Colts', 'AFC', 'South', 'QB', 13.0, 'Común', 'activo'),
+(11, 'Trevor Lawrence', 'Jacksonville Jaguars', 'AFC', 'South', 'QB', 15.0, 'Rara', 'activo'),
+(12, 'Cam Ward', 'Tennessee Titans', 'AFC', 'South', 'QB', 11.0, 'Común', 'activo'),
+(13, 'Bo Nix', 'Denver Broncos', 'AFC', 'West', 'QB', 16.0, 'Rara', 'activo'),
+(14, 'Patrick Mahomes', 'Kansas City Chiefs', 'AFC', 'West', 'QB', 19.8, 'Legendaria', 'activo'),
+(15, 'Kirk Cousins', 'Las Vegas Raiders', 'AFC', 'West', 'QB', 12.5, 'Rara', 'activo'),
+(16, 'Justin Herbert', 'Los Angeles Chargers', 'AFC', 'West', 'QB', 16.5, 'Épica', 'activo'),
+(17, 'Dak Prescott', 'Dallas Cowboys', 'NFC', 'East', 'QB', 18.4, 'Épica', 'activo'),
+(18, 'Jaxson Dart', 'New York Giants', 'NFC', 'East', 'QB', 9.0, 'Común', 'activo'),
+(19, 'Jalen Hurts', 'Philadelphia Eagles', 'NFC', 'East', 'QB', 21.3, 'Legendaria', 'activo'),
+(20, 'Jayden Daniels', 'Washington Commanders', 'NFC', 'East', 'QB', 20.6, 'Épica', 'activo'),
+(21, 'Caleb Williams', 'Chicago Bears', 'NFC', 'North', 'QB', 14.0, 'Rara', 'activo'),
+(22, 'Jared Goff', 'Detroit Lions', 'NFC', 'North', 'QB', 17.0, 'Rara', 'activo'),
+(23, 'Jordan Love', 'Green Bay Packers', 'NFC', 'North', 'QB', 15.5, 'Rara', 'activo'),
+(24, 'Kyler Murray', 'Minnesota Vikings', 'NFC', 'North', 'QB', 16.8, 'Rara', 'activo'),
+(25, 'Tua Tagovailoa', 'Atlanta Falcons', 'NFC', 'South', 'QB', 13.5, 'Rara', 'activo'),
+(26, 'Bryce Young', 'Carolina Panthers', 'NFC', 'South', 'QB', 10.0, 'Común', 'activo'),
+(27, 'Tyler Shough', 'New Orleans Saints', 'NFC', 'South', 'QB', 8.5, 'Común', 'activo'),
+(28, 'Baker Mayfield', 'Tampa Bay Buccaneers', 'NFC', 'South', 'QB', 15.8, 'Rara', 'activo'),
+(29, 'Jacoby Brissett', 'Arizona Cardinals', 'NFC', 'West', 'QB', 9.5, 'Común', 'activo'),
+(30, 'Matthew Stafford', 'Los Angeles Rams', 'NFC', 'West', 'QB', 11.0, 'Épica', 'activo'),
+(31, 'Brock Purdy', 'San Francisco 49ers', 'NFC', 'West', 'QB', 20.9, 'Épica', 'activo'),
+(32, 'Sam Darnold', 'Seattle Seahawks', 'NFC', 'West', 'QB', 6.0, 'Rara', 'activo'),
+(33, 'Bijan Robinson', 'Atlanta Falcons', 'NFC', 'South', 'RB', 23.4, 'Legendaria', 'activo'),
+(34, 'Jahmyr Gibbs', 'Detroit Lions', 'NFC', 'North', 'RB', 21.7, 'Épica', 'activo'),
+(35, 'Christian McCaffrey', 'San Francisco 49ers', 'NFC', 'West', 'RB', 19.5, 'Legendaria', 'activo'),
+(36, 'Saquon Barkley', 'Philadelphia Eagles', 'NFC', 'East', 'RB', 22.8, 'Legendaria', 'activo'),
+(37, 'Derrick Henry', 'Baltimore Ravens', 'AFC', 'North', 'RB', 20.2, 'Épica', 'activo'),
+(38, 'Jonathan Taylor', 'Indianapolis Colts', 'AFC', 'South', 'RB', 18.9, 'Épica', 'activo'),
+(39, 'Ashton Jeanty', 'Las Vegas Raiders', 'AFC', 'West', 'RB', 15.6, 'Rara', 'activo'),
+(40, 'Kyren Williams', 'Los Angeles Rams', 'NFC', 'West', 'RB', 17.3, 'Rara', 'activo'),
+(41, 'De\'Von Achane', 'Miami Dolphins', 'AFC', 'East', 'RB', 19.1, 'Épica', 'activo'),
+(42, 'James Cook', 'Buffalo Bills', 'AFC', 'East', 'RB', 16.9, 'Rara', 'activo'),
+(43, 'Breece Hall', 'New York Jets', 'AFC', 'East', 'RB', 15.4, 'Rara', 'activo'),
+(44, 'Chase Brown', 'Cincinnati Bengals', 'AFC', 'North', 'RB', 14.8, 'Común', 'activo'),
+(45, 'Ja\'Marr Chase', 'Cincinnati Bengals', 'AFC', 'North', 'WR', 24.1, 'Legendaria', 'activo'),
+(46, 'CeeDee Lamb', 'Dallas Cowboys', 'NFC', 'East', 'WR', 20.4, 'Legendaria', 'activo'),
+(47, 'Justin Jefferson', 'Minnesota Vikings', 'NFC', 'North', 'WR', 19.7, 'Legendaria', 'activo'),
+(48, 'Amon-Ra St. Brown', 'Detroit Lions', 'NFC', 'North', 'WR', 18.3, 'Épica', 'activo'),
+(49, 'Puka Nacua', 'Los Angeles Rams', 'NFC', 'West', 'WR', 21.5, 'Épica', 'activo'),
+(50, 'Malik Nabers', 'New York Giants', 'NFC', 'East', 'WR', 16.8, 'Rara', 'activo'),
+(51, 'Nico Collins', 'Houston Texans', 'AFC', 'South', 'WR', 17.2, 'Rara', 'activo'),
+(52, 'Drake London', 'Atlanta Falcons', 'NFC', 'South', 'WR', 15.9, 'Rara', 'activo'),
+(53, 'Tyreek Hill', 'Miami Dolphins', 'AFC', 'East', 'WR', 18.0, 'Épica', 'activo'),
+(54, 'A.J. Brown', 'Philadelphia Eagles', 'NFC', 'East', 'WR', 17.6, 'Épica', 'activo'),
+(55, 'Davante Adams', 'Los Angeles Rams', 'NFC', 'West', 'WR', 16.2, 'Épica', 'activo'),
+(56, 'DK Metcalf', 'Pittsburgh Steelers', 'AFC', 'North', 'WR', 15.1, 'Rara', 'activo'),
+(57, 'Brock Bowers', 'Las Vegas Raiders', 'AFC', 'West', 'TE', 16.4, 'Épica', 'activo'),
+(58, 'Trey McBride', 'Arizona Cardinals', 'NFC', 'West', 'TE', 14.7, 'Rara', 'activo'),
+(59, 'Sam LaPorta', 'Detroit Lions', 'NFC', 'North', 'TE', 12.3, 'Rara', 'activo'),
+(60, 'Mark Andrews', 'Baltimore Ravens', 'AFC', 'North', 'TE', 11.8, 'Rara', 'activo'),
+(61, 'George Kittle', 'San Francisco 49ers', 'NFC', 'West', 'TE', 15.0, 'Épica', 'activo'),
+(62, 'Evan Engram', 'Denver Broncos', 'AFC', 'West', 'TE', 11.2, 'Común', 'activo'),
+(63, 'David Njoku', 'Cleveland Browns', 'AFC', 'North', 'TE', 10.6, 'Común', 'activo'),
+(64, 'Brandon Aubrey', 'Dallas Cowboys', 'NFC', 'East', 'K', 9.0, 'Rara', 'activo'),
+(65, 'Harrison Butker', 'Kansas City Chiefs', 'AFC', 'West', 'K', 8.0, 'Común', 'activo'),
+(66, 'Chris Boswell', 'Pittsburgh Steelers', 'AFC', 'North', 'K', 7.0, 'Común', 'activo'),
+(67, 'Jake Bates', 'Detroit Lions', 'NFC', 'North', 'K', 8.5, 'Común', 'activo'),
+(68, 'Cameron Dicker', 'Los Angeles Chargers', 'AFC', 'West', 'K', 7.5, 'Común', 'activo'),
+(69, '49ers D/ST', 'San Francisco 49ers', 'NFC', 'West', 'DEF', 10.0, 'Rara', 'activo'),
+(70, 'Ravens D/ST', 'Baltimore Ravens', 'AFC', 'North', 'DEF', 9.0, 'Rara', 'activo'),
+(71, 'Broncos D/ST', 'Denver Broncos', 'AFC', 'West', 'DEF', 8.0, 'Común', 'activo'),
+(72, 'Steelers D/ST', 'Pittsburgh Steelers', 'AFC', 'North', 'DEF', 7.0, 'Común', 'activo'),
+(73, 'Tom Brady', 'Tampa Bay Buccaneers', 'NFC', 'South', 'QB', NULL, 'Legendaria', 'retirado'),
+(74, 'Peyton Manning', 'Denver Broncos', 'AFC', 'West', 'QB', NULL, 'Legendaria', 'retirado');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `sobres_abiertos`
+--
+
+CREATE TABLE `sobres_abiertos` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `fecha` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -159,9 +216,9 @@ INSERT INTO `users` (`id`, `email`, `password`, `created_at`) VALUES
 --
 
 --
--- Indices de la tabla `mi_equipo`
+-- Indices de la tabla `mi_coleccion`
 --
-ALTER TABLE `mi_equipo`
+ALTER TABLE `mi_coleccion`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_user_player` (`user_id`,`player_id`),
   ADD KEY `fk_mi_equipo_player` (`player_id`);
@@ -180,6 +237,13 @@ ALTER TABLE `players`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indices de la tabla `sobres_abiertos`
+--
+ALTER TABLE `sobres_abiertos`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Indices de la tabla `users`
 --
 ALTER TABLE `users`
@@ -191,10 +255,10 @@ ALTER TABLE `users`
 --
 
 --
--- AUTO_INCREMENT de la tabla `mi_equipo`
+-- AUTO_INCREMENT de la tabla `mi_coleccion`
 --
-ALTER TABLE `mi_equipo`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+ALTER TABLE `mi_coleccion`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT de la tabla `passing_stats`
@@ -206,7 +270,13 @@ ALTER TABLE `passing_stats`
 -- AUTO_INCREMENT de la tabla `players`
 --
 ALTER TABLE `players`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
+
+--
+-- AUTO_INCREMENT de la tabla `sobres_abiertos`
+--
+ALTER TABLE `sobres_abiertos`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `users`
@@ -219,9 +289,9 @@ ALTER TABLE `users`
 --
 
 --
--- Filtros para la tabla `mi_equipo`
+-- Filtros para la tabla `mi_coleccion`
 --
-ALTER TABLE `mi_equipo`
+ALTER TABLE `mi_coleccion`
   ADD CONSTRAINT `fk_mi_equipo_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_mi_equipo_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -230,6 +300,12 @@ ALTER TABLE `mi_equipo`
 --
 ALTER TABLE `passing_stats`
   ADD CONSTRAINT `fk_passing_player` FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `sobres_abiertos`
+--
+ALTER TABLE `sobres_abiertos`
+  ADD CONSTRAINT `sobres_abiertos_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

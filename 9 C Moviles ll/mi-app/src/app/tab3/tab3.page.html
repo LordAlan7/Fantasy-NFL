@@ -1,89 +1,93 @@
 <ion-header [translucent]="true">
-  <ion-toolbar color="primary">
-    <ion-title>🏈 Mi Equipo Fantasy</ion-title>
-    <!-- Indicador visual de estado de conexión -->
-    <ion-badge *ngIf="desdeCache" color="warning" slot="end" style="margin-right:12px">
-      <ion-icon name="cloud-offline-outline"></ion-icon>
-      Datos locales
-    </ion-badge>
-    <ion-badge *ngIf="!desdeCache && (roster.length > 0 || jugadoresFiltrados.length > 0)" color="success" slot="end" style="margin-right:12px">
-      <ion-icon name="cloud-done-outline"></ion-icon>
-      En línea
-    </ion-badge>
+  <ion-toolbar color="dark">
+    <ion-title>🃏 Abrir Sobres</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Mi Equipo Fantasy</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content [fullscreen]="true" class="pack-content">
 
-  @if (mensaje) {
-    <div class="mensaje {{ mensajeTipo }}">{{ mensaje }}</div>
-  }
-
-  <!-- Aviso de modo sin conexión -->
-  @if (desdeCache) {
-    <div class="banner-cache">
-      ⚠️ Sin conexión con el servidor — mostrando tu equipo guardado localmente.
+  <!-- Idle state: show the pack -->
+  @if (estado === 'idle') {
+    <div class="pack-scene">
+      <div class="pack-area">
+        <div class="pack-glow-ring"></div>
+        <div class="pack-container" (click)="abrirSobre()" [class.pack-shake]="shaking">
+          <img src="assets/images/ui/sobresNFL.png" alt="Sobre NFL" class="pack-image"/>
+          <div class="pack-overlay">
+            <p class="tap-label">Toca para abrir</p>
+          </div>
+        </div>
+        <div class="credits-info">
+          <span class="coins-icon">🏈</span>
+          <span>Tus cartas: <strong>{{ totalCartas }}</strong></span>
+        </div>
+      </div>
     </div>
   }
 
-  <!-- ROSTER -->
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Mi equipo ({{ roster.length }} jugadores)</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      @if (roster.length > 0) {
-        <ion-list>
-          @for (j of roster; track j.id) {
-            <ion-item>
-              <ion-label>
-                <h2>{{ j.player_name }}</h2>
-                <p>{{ j.team }} · {{ j.position }}</p>
-              </ion-label>
-              <ion-note slot="end">{{ j.puntos }} pts</ion-note>
-              <ion-button slot="end" color="danger" size="small"
-                          (click)="quitar(j.id, j.player_name)">
-                Quitar
-              </ion-button>
-            </ion-item>
-          }
-        </ion-list>
-      } @else {
-        <p class="vacio">Tu equipo está vacío. Agrega jugadores desde la lista de abajo.</p>
-      }
-      <p class="total">Total del equipo: {{ totalPuntos }} pts</p>
-    </ion-card-content>
-  </ion-card>
+  <!-- Opening animation: spinning rarity reveal -->
+  @if (estado === 'opening') {
+    <div class="opening-scene">
+      <div class="rarity-burst {{ rarityClass }}">
+        <div class="burst-ring ring-1"></div>
+        <div class="burst-ring ring-2"></div>
+        <div class="burst-ring ring-3"></div>
+        <div class="rarity-label">{{ rarityLabel }}</div>
+      </div>
+    </div>
+  }
 
-  <!-- CATÁLOGO -->
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Jugadores disponibles</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-searchbar placeholder="Buscar por nombre o equipo..."
-                     (ionInput)="filtrar($event)"></ion-searchbar>
-      <ion-list>
-        @for (j of jugadoresFiltrados; track j.id) {
-          <ion-item>
-            <ion-label>
-              <h2>{{ j.player_name }}</h2>
-              <p>{{ j.team }} · {{ j.conference }} {{ j.division }}</p>
-            </ion-label>
-            <ion-note slot="end">{{ j.puntos }} pts</ion-note>
-            <ion-button slot="end" color="success" size="small"
-                        [disabled]="estaEnEquipo(j.id)"
-                        (click)="agregar(j.id)">
-              {{ estaEnEquipo(j.id) ? 'En tu equipo' : 'Agregar' }}
-            </ion-button>
-          </ion-item>
-        }
-      </ion-list>
-    </ion-card-content>
-  </ion-card>
+  <!-- Result: player card reveal -->
+  @if (estado === 'result' && jugadorObtenido) {
+    <div class="result-scene">
+      <div class="result-card-wrapper {{ rarityClass }}">
+        <!-- Ambient particles -->
+        <div class="particles-container">
+          @for (_ of particles; track $index) {
+            <div class="particle" [style]="particleStyle($index)"></div>
+          }
+        </div>
+
+        <!-- The card itself -->
+        <div class="player-card">
+          <div class="card-rarity-banner {{ rarityClass }}">
+            {{ rarityLabel }}
+          </div>
+          <div class="card-image-wrap">
+            @if (hasImage(jugadorObtenido.player_name)) {
+              <img [src]="getPlayerImage(jugadorObtenido.player_name)"
+                   [alt]="jugadorObtenido.player_name"
+                   class="card-player-img"
+                   (error)="onImgError($event)"/>
+            } @else {
+              <div class="card-img-placeholder">
+                <span class="placeholder-emoji">🏈</span>
+              </div>
+            }
+          </div>
+          <div class="card-info">
+            <h2 class="card-name">{{ jugadorObtenido.player_name }}</h2>
+            <div class="card-meta">
+              <span class="card-position">{{ jugadorObtenido.position }}</span>
+              <span class="card-team">{{ jugadorObtenido.team }}</span>
+            </div>
+            @if (jugadorObtenido.puntos_semana) {
+              <div class="card-pts">{{ jugadorObtenido.puntos_semana }} pts</div>
+            }
+          </div>
+          <div class="card-shine"></div>
+        </div>
+
+        <button class="btn-next" (click)="resetear()">
+          Abrir otro sobre
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Error toast inline -->
+  @if (mensajeError) {
+    <div class="error-banner">{{ mensajeError }}</div>
+  }
+
 </ion-content>

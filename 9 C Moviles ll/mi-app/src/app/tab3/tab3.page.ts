@@ -1,37 +1,57 @@
 import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { CommonModule } from '@angular/common';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent,
-  IonCard, IonCardHeader, IonCardTitle, IonCardContent,
-  IonList, IonItem, IonLabel, IonNote, IonButton, IonSearchbar,
-  IonBadge, IonIcon,
 } from '@ionic/angular';
-import { CommonModule } from '@angular/common';
-import { addIcons } from 'ionicons';
-import { cloudOfflineOutline, cloudDoneOutline } from 'ionicons/icons';
-import { StorageService } from '../services/storage.service';
-import { firstValueFrom } from 'rxjs';
+import axios from 'axios';
 
-interface Jugador {
+interface Player {
   id: number;
   player_name: string;
   team: string;
   conference: string;
   division: string;
   position: string;
-  puntos: number;
+  puntos_semana: number | null;
+  rareza: string;
+  estado: string;
 }
 
-interface OfflineAction {
-  type: 'ADD' | 'REMOVE';
-  playerId: number;
-}
+// Map player names to their image filenames as they appear in assets/images/players
+const PLAYER_IMAGE_MAP: Record<string, string> = {
+  'Josh Allen': 'Josh Allen.jpg',
+  'Drake Maye': 'Drake Maye.PNG',
+  'Geno Smith': 'Geno Smith.jpg',
+  'Malik Willis': 'Malik Willis.PNG',
+  'Lamar Jackson': 'Lamar Jackson.jpg',
+  'Joe Burrow': 'Joe Burrow.PNG',
+  'Deshaun Watson': 'Deshaun Watson.PNG',
+  'Aaron Rodgers': 'Aaron Rodgers.PNG',
+  'C.J. Stroud': 'C.J. Stroud.PNG',
+  'Daniel Jones': 'Daniel Jones.PNG',
+  'Trevor Lawrence': 'Trevor Lawrence.PNG',
+  'Cam Ward': 'Cam Ward.jpg',
+  'Bo Nix': 'Bo Nix.PNG',
+  'Patrick Mahomes': 'Patrick Mahomes.PNG',
+  'Kirk Cousins': 'Kirk Cousins.PNG',
+  'Justin Herbert': 'Justin Herbert.PNG',
+  'Dak Prescott': 'Dak Prescott.PNG',
+  'Jaxson Dart': 'Jaxson Dart.PNG',
+  'Jalen Hurts': 'Jalen Hurts.PNG',
+  'Jayden Daniels': 'Jayden Daniels.PNG',
+  'Caleb Williams': 'Caleb Williams.PNG',
+  'Jared Goff': 'Jared Goff.PNG',
+  'Jordan Love': 'Jordan Love.PNG',
+  'Kyler Murray': 'Kyler Murray.PNG',
+  'Tua Tagovailoa': 'Tua Tagovailoa.PNG',
+};
 
-// Claves de almacenamiento en Preferences
-const KEY_ROSTER    = 'tab3_roster';
-const KEY_JUGADORES = 'tab3_jugadores';
-const KEY_TOTAL     = 'tab3_total_puntos';
-const KEY_OFFLINE_ACTIONS = 'tab3_offline_actions';
+const RARITY_CONFIG: Record<string, { label: string; cssClass: string }> = {
+  'Común':     { label: '⚪ Común',     cssClass: 'rarity-common' },
+  'Rara':      { label: '🔵 Rara',      cssClass: 'rarity-rare' },
+  'Épica':     { label: '🟣 Épica',     cssClass: 'rarity-epic' },
+  'Legendaria':{ label: '🟡 Legendaria',cssClass: 'rarity-legendary' },
+};
 
 @Component({
   selector: 'app-tab3',
@@ -41,204 +61,124 @@ const KEY_OFFLINE_ACTIONS = 'tab3_offline_actions';
   imports: [
     CommonModule,
     IonHeader, IonToolbar, IonTitle, IonContent,
-    IonCard, IonCardHeader, IonCardTitle, IonCardContent,
-    IonList, IonItem, IonLabel, IonNote, IonButton, IonSearchbar,
-    IonBadge, IonIcon,
   ],
 })
 export class Tab3Page implements OnInit {
+  private api = 'http://localhost/apis/open_pack.php';
+  private coleccionApi = 'http://localhost/apis/mi_coleccion.php';
 
-  // Ruta a tu API online local
-  private api = 'http://localhost/apis/my_equipo.php';
-
-  roster: Jugador[] = [];
-  jugadores: Jugador[] = [];
-  jugadoresFiltrados: Jugador[] = [];
-  totalPuntos = 0;
-
-  desdeCache = false;
-
-  mensaje = '';
-  mensajeTipo = 'ok';
-  private msgTimer: any;
-
-  constructor(
-    private http: HttpClient,
-    private storage: StorageService
-  ) {
-    addIcons({ cloudOfflineOutline, cloudDoneOutline });
-  }
-
-  ngOnInit(): void {
-    this.cargar();
-  }
+  estado: 'idle' | 'opening' | 'result' = 'idle';
+  jugadorObtenido: Player | null = null;
+  rarityClass = '';
+  rarityLabel = '';
+  shaking = false;
+  totalCartas = 0;
+  mensajeError = '';
+  particles = Array(20).fill(0);
 
   private get userId(): number {
     return Number(localStorage.getItem('user_id') || 0);
   }
 
-  async cargar(): Promise<void> {
-    this.desdeCache = false;
+  constructor() {}
 
+  ngOnInit() {
+    this.cargarTotalCartas();
+  }
+
+  private async cargarTotalCartas() {
+    try {
+      const res = await axios.get(`${this.coleccionApi}?user_id=${this.userId}`);
+      if (res.data && res.data.total !== undefined) {
+        this.totalCartas = res.data.total;
+      }
+    } catch {
+      // silently fail
+    }
+  }
+
+  async abrirSobre() {
     if (!this.userId) {
-      this.mostrarMensaje('No se encontró el usuario. Inicia sesión de nuevo.', 'error');
+      this.mostrarError('Inicia sesión para abrir sobres.');
       return;
     }
+    if (this.estado !== 'idle') return;
+
+    // Brief shake animation before opening
+    this.shaking = true;
+    await this.sleep(400);
+    this.shaking = false;
+
+    this.estado = 'opening';
 
     try {
-      await this.sincronizarOffline();
+      const response = await axios.post(this.api, { user_id: this.userId });
+      const data = response.data;
 
-      const data = await firstValueFrom(
-        this.http.get<any>(`${this.api}?user_id=${this.userId}`)
-      );
+      if (data.success && data.player) {
+        const player: Player = data.player;
+        const cfg = RARITY_CONFIG[player.rareza] || RARITY_CONFIG['Común'];
+        this.rarityClass = cfg.cssClass;
+        this.rarityLabel = cfg.label;
 
-      this.roster      = data.roster;
-      this.jugadores   = data.jugadores;
-      this.totalPuntos = data.total_puntos;
-      this.filtrarLista('');
+        // Wait for opening animation to finish
+        await this.sleep(1800);
 
-      // Persistir en Preferences para uso sin conexión
-      await this.storage.set<Jugador[]>(KEY_ROSTER,    this.roster);
-      await this.storage.set<Jugador[]>(KEY_JUGADORES, this.jugadores);
-      await this.storage.set<number>  (KEY_TOTAL,      this.totalPuntos);
-
-    } catch (err) {
-      console.warn('API no disponible, cargando equipo desde caché...', err);
-      await this.cargarDesdeCache();
-    }
-  }
-
-  private async cargarDesdeCache(): Promise<void> {
-    const rosterCached    = await this.storage.get<Jugador[]>(KEY_ROSTER);
-    const jugadoresCached = await this.storage.get<Jugador[]>(KEY_JUGADORES);
-    const totalCached     = await this.storage.get<number>(KEY_TOTAL);
-
-    if (rosterCached !== null || jugadoresCached !== null) {
-      this.roster      = rosterCached    ?? [];
-      this.jugadores   = jugadoresCached ?? [];
-      this.totalPuntos = totalCached     ?? 0;
-      this.filtrarLista('');
-      this.desdeCache = true;
-    } else {
-      this.mostrarMensaje('Sin conexión y sin datos en caché.', 'error');
-    }
-  }
-
-  filtrar(ev: any): void {
-    const texto = (ev?.detail?.value ?? '').toLowerCase().trim();
-    this.filtrarLista(texto);
-  }
-
-  private filtrarLista(texto: string): void {
-    this.jugadoresFiltrados = this.jugadores.filter(j =>
-      !texto || j.player_name.toLowerCase().includes(texto)
-             || j.team.toLowerCase().includes(texto));
-  }
-
-  estaEnEquipo(id: number): boolean {
-    return this.roster.some(j => j.id === id);
-  }
-
-  async agregar(playerId: number): Promise<void> {
-    const jugador = this.jugadores.find(j => j.id === playerId);
-    if (!jugador) return;
-
-    this.http.post<any>(this.api, {
-      user_id: this.userId,
-      player_id: playerId,
-    }).subscribe({
-      next: async (data) => {
-        this.mostrarMensaje(data.success, 'ok');
-        await this.agregarLocal(jugador);
-        this.desdeCache = false;
-      },
-      error: async (err) => {
-        if (err.status === 0 || err.status === 504) {
-          this.mostrarMensaje('Jugador agregado offline', 'ok');
-          await this.agregarLocal(jugador);
-          await this.registrarAccionOffline('ADD', playerId);
-        } else {
-          this.mostrarMensaje(err.error?.error || 'Error al agregar', 'error');
-        }
-      },
-    });
-  }
-
-  async quitar(playerId: number, nombre: string): Promise<void> {
-    if (!confirm(`¿Quitar a ${nombre} de tu equipo?`)) return;
-
-    this.http.delete<any>(`${this.api}?user_id=${this.userId}&player_id=${playerId}`).subscribe({
-      next: async (data) => {
-        this.mostrarMensaje(data.success, 'ok');
-        await this.quitarLocal(playerId);
-        this.desdeCache = false;
-      },
-      error: async (err) => {
-        if (err.status === 0 || err.status === 504) {
-          this.mostrarMensaje('Jugador quitado offline', 'ok');
-          await this.quitarLocal(playerId);
-          await this.registrarAccionOffline('REMOVE', playerId);
-        } else {
-          this.mostrarMensaje(err.error?.error || 'Error al quitar', 'error');
-        }
-      },
-    });
-  }
-
-  private async agregarLocal(jugador: Jugador) {
-    if (!this.roster.some(j => j.id === jugador.id)) {
-      this.roster = [...this.roster, jugador];
-      this.totalPuntos += jugador.puntos;
-      await this.storage.set<Jugador[]>(KEY_ROSTER, this.roster);
-      await this.storage.set<number>(KEY_TOTAL, this.totalPuntos);
-    }
-  }
-
-  private async quitarLocal(playerId: number) {
-    const jugador = this.roster.find(j => j.id === playerId);
-    if (jugador) {
-      this.roster = this.roster.filter(j => j.id !== playerId);
-      this.totalPuntos -= jugador.puntos;
-      await this.storage.set<Jugador[]>(KEY_ROSTER, this.roster);
-      await this.storage.set<number>(KEY_TOTAL, this.totalPuntos);
-    }
-  }
-
-  private async registrarAccionOffline(type: 'ADD' | 'REMOVE', playerId: number) {
-    const acciones = (await this.storage.get<OfflineAction[]>(KEY_OFFLINE_ACTIONS)) || [];
-    acciones.push({ type, playerId });
-    await this.storage.set(KEY_OFFLINE_ACTIONS, acciones);
-  }
-
-  private async sincronizarOffline(): Promise<void> {
-    const acciones = (await this.storage.get<OfflineAction[]>(KEY_OFFLINE_ACTIONS)) || [];
-    if (acciones.length === 0) return;
-
-    for (const acc of acciones) {
-      try {
-        if (acc.type === 'ADD') {
-          await firstValueFrom(this.http.post<any>(this.api, {
-            user_id: this.userId,
-            player_id: acc.playerId,
-          }));
-        } else if (acc.type === 'REMOVE') {
-          await firstValueFrom(this.http.delete<any>(`${this.api}?user_id=${this.userId}&player_id=${acc.playerId}`));
-        }
-      } catch (err: any) {
-        if (err.status === 0 || err.status === 504) {
-          throw err;
-        }
+        this.jugadorObtenido = player;
+        this.estado = 'result';
+        this.totalCartas++;
+      } else {
+        this.estado = 'idle';
+        this.mostrarError(data.message || 'Error al abrir el sobre.');
       }
+    } catch (err: any) {
+      this.estado = 'idle';
+      const msg = err?.response?.data?.message || 'Sin conexión con el servidor.';
+      this.mostrarError(msg);
+      console.error('open_pack error:', err);
     }
-    
-    await this.storage.set(KEY_OFFLINE_ACTIONS, []);
-    this.mostrarMensaje('Acciones offline sincronizadas', 'ok');
   }
 
-  private mostrarMensaje(texto: string, tipo: 'ok' | 'error'): void {
-    this.mensaje = texto;
-    this.mensajeTipo = tipo;
-    clearTimeout(this.msgTimer);
-    this.msgTimer = setTimeout(() => { this.mensaje = ''; }, 3500);
+  resetear() {
+    this.estado = 'idle';
+    this.jugadorObtenido = null;
+    this.rarityClass = '';
+    this.rarityLabel = '';
+  }
+
+  hasImage(name: string): boolean {
+    return name in PLAYER_IMAGE_MAP;
+  }
+
+  getPlayerImage(name: string): string {
+    return `assets/images/players/${PLAYER_IMAGE_MAP[name]}`;
+  }
+
+  onImgError(event: any) {
+    event.target.style.display = 'none';
+    event.target.nextElementSibling?.classList.remove('hidden');
+  }
+
+  particleStyle(index: number): string {
+    const angle = (index / this.particles.length) * 360;
+    const dist = 80 + Math.random() * 60;
+    const delay = (index * 50);
+    const size = 4 + Math.random() * 6;
+    return `
+      --angle: ${angle}deg;
+      --dist: ${dist}px;
+      --delay: ${delay}ms;
+      width: ${size}px;
+      height: ${size}px;
+    `;
+  }
+
+  private mostrarError(msg: string) {
+    this.mensajeError = msg;
+    setTimeout(() => { this.mensajeError = ''; }, 3500);
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }

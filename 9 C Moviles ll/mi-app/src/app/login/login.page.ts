@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { IonHeader, IonToolbar, IonTitle, IonContent, ToastController, IonList, IonItem, IonLabel, IonInput, IonButton } from '@ionic/angular';
+import { IonContent, ToastController } from '@ionic/angular';
 import axios from 'axios';
 import { StorageService } from '../services/storage.service';
 
@@ -14,15 +14,7 @@ import { StorageService } from '../services/storage.service';
   imports: [
     CommonModule,
     FormsModule,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
     IonContent,
-    IonList,
-    IonItem,
-    IonLabel,
-    IonInput,
-    IonButton
   ],
 })
 export class LoginPage {
@@ -48,7 +40,7 @@ export class LoginPage {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('user_id', String(response.data.user_id));
 
-        await this.presentToast('Login exitoso');
+        await this.presentToast('¡Bienvenido!');
         this.router.navigateByUrl('/tabs/tab1');
       } else {
         await this.presentToast('Error: ' + response.data.message);

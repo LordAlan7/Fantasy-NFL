@@ -1,45 +1,367 @@
-.banner-cache {
-  background: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffc107;
-  border-radius: 6px;
-  padding: 10px 16px;
-  margin: 12px 16px;
-  font-size: 13px;
-  font-weight: 500;
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');
+
+$common:    #a0aec0;
+$rare:      #4299e1;
+$epic:      #9b59b6;
+$legendary: #f6c90e;
+
+ion-toolbar {
+  --background: #0d0d1a;
+  --color: #fff;
 }
 
-.mensaje {
-  padding: 10px 16px;
-  margin: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
+ion-content.pack-content {
+  --background: #0d0d1a;
+  font-family: 'Outfit', sans-serif;
+}
 
-  &.ok {
-    background: #eafaf1;
-    color: #1e8449;
-    border: 1px solid #a9dfbf;
+// ─── Idle: Pack Scene ──────────────────────────────────────
+.pack-scene {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 90vh;
+}
+
+.pack-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.pack-glow-ring {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 220, 130, 0.15) 0%, transparent 70%);
+  animation: pulseRing 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulseRing {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.pack-container {
+  position: relative;
+  cursor: pointer;
+  width: 200px;
+
+  &:hover .pack-image {
+    transform: translateY(-8px) scale(1.04);
+    filter: drop-shadow(0 12px 32px rgba(0, 220, 130, 0.5));
   }
 
-  &.error {
-    background: #fdedec;
-    color: #c0392b;
-    border: 1px solid #f5b7b1;
+  &:active .pack-image {
+    transform: scale(0.96);
   }
 }
 
-.vacio {
-  color: #888;
-  font-style: italic;
-  padding: 8px 0;
+.pack-image {
+  width: 200px;
+  border-radius: 16px;
+  transition: transform 0.3s ease, filter 0.3s ease;
+  filter: drop-shadow(0 8px 24px rgba(0, 220, 130, 0.3));
 }
 
-.total {
-  font-weight: 600;
-  font-size: 15px;
-  color: #2c3e50;
-  margin-top: 12px;
-  border-top: 1px solid #eee;
-  padding-top: 10px;
+.pack-overlay {
+  text-align: center;
+  margin-top: 14px;
+}
+
+.tap-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.pack-shake {
+  .pack-image {
+    animation: shake 0.4s ease;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  20% { transform: translateX(-6px) rotate(-3deg); }
+  40% { transform: translateX(6px) rotate(3deg); }
+  60% { transform: translateX(-4px) rotate(-2deg); }
+  80% { transform: translateX(4px) rotate(2deg); }
+}
+
+.credits-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+
+  strong { color: #00dc82; }
+
+  .coins-icon { font-size: 1.1rem; }
+}
+
+// ─── Opening Scene ──────────────────────────────────────────
+.opening-scene {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 90vh;
+}
+
+.rarity-burst {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  height: 200px;
+
+  &.rarity-common   { --rarity-color: #{$common}; }
+  &.rarity-rare     { --rarity-color: #{$rare}; }
+  &.rarity-epic     { --rarity-color: #{$epic}; }
+  &.rarity-legendary { --rarity-color: #{$legendary}; }
+}
+
+.burst-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid var(--rarity-color, #fff);
+  opacity: 0;
+  animation: burstExpand 1.8s ease-out infinite;
+
+  &.ring-1 { width: 80px; height: 80px; animation-delay: 0s; }
+  &.ring-2 { width: 140px; height: 140px; animation-delay: 0.3s; }
+  &.ring-3 { width: 200px; height: 200px; animation-delay: 0.6s; }
+}
+
+@keyframes burstExpand {
+  0%   { transform: scale(0.2); opacity: 0.9; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.rarity-label {
+  color: var(--rarity-color, #fff);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-align: center;
+  animation: labelPulse 0.5s ease-out;
+  text-shadow: 0 0 20px var(--rarity-color, #fff);
+}
+
+@keyframes labelPulse {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+// ─── Result Scene ───────────────────────────────────────────
+.result-scene {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 90vh;
+  padding: 20px;
+}
+
+.result-card-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  
+  --rarity-color: #{$common};
+  &.rarity-rare      { --rarity-color: #{$rare}; }
+  &.rarity-epic      { --rarity-color: #{$epic}; }
+  &.rarity-legendary { --rarity-color: #{$legendary}; }
+}
+
+// Particles
+.particles-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  background: var(--rarity-color, #fff);
+  opacity: 0;
+  animation: particleFly 1.5s ease-out var(--delay, 0ms) forwards;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes particleFly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateX(10px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateX(var(--dist, 80px));
+  }
+}
+
+// Player Card
+.player-card {
+  position: relative;
+  width: 260px;
+  background: linear-gradient(160deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+  border: 2px solid var(--rarity-color, #fff);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 0 30px rgba(255,255,255,0.05),
+    0 0 60px color-mix(in srgb, var(--rarity-color, #fff) 30%, transparent);
+  animation: cardReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes cardReveal {
+  0% { transform: scale(0.3) rotateY(90deg); opacity: 0; }
+  100% { transform: scale(1) rotateY(0deg); opacity: 1; }
+}
+
+.card-rarity-banner {
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #0d0d1a;
+  background: var(--rarity-color, $common);
+
+  .rarity-common   & { color: #1a1a2e; }
+}
+
+.card-image-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  background: rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.card-player-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.card-img-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255,255,255,0.3);
+  font-size: 0.8rem;
+
+  .placeholder-emoji { font-size: 3rem; }
+}
+
+.card-info {
+  padding: 16px;
+  text-align: center;
+}
+
+.card-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 6px;
+  line-height: 1.2;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 8px;
+}
+
+.card-position {
+  background: var(--rarity-color, #fff);
+  color: #0d0d1a;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+}
+
+.card-pts {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--rarity-color, #fff);
+}
+
+.card-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.07) 0%,
+    transparent 50%,
+    rgba(255,255,255,0.03) 100%
+  );
+  pointer-events: none;
+}
+
+// ─── Next Button ───────────────────────────────────────────
+.btn-next {
+  padding: 14px 36px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #00dc82, #00b368);
+  color: #051018;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(0, 220, 130, 0.35);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(0, 220, 130, 0.5);
+  }
+}
+
+// ─── Error Banner ──────────────────────────────────────────
+.error-banner {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #c0392b;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  z-index: 99;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
