@@ -1,6 +1,7 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideIonicAngular } from '@ionic/angular';
+import { provideRouter } from '@angular/router';
 
 import { Tab2Page } from './tab2.page';
 
@@ -11,7 +12,11 @@ describe('Tab2Page', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Tab2Page],
-      providers: [provideZonelessChangeDetection(), provideIonicAngular()],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideIonicAngular(),
+        provideRouter([]),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Tab2Page);

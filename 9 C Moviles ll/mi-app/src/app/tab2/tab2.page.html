@@ -1,31 +1,185 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title> Photo Gallery </ion-title>
+  <ion-toolbar color="dark">
+    <ion-title>Mi Colección</ion-title>
+    @if (!vacia()) {
+      <ion-buttons slot="end">
+        <ion-button (click)="cambiarOrden()" class="btn-orden">
+          <ion-icon name="swap-vertical-outline" slot="start"></ion-icon>
+          {{ etiquetaOrden() }}
+        </ion-button>
+      </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Photo Gallery</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content [fullscreen]="true" class="coleccion-content">
 
-  <ion-grid>
-    <ion-row>
-      @for (photo of photoService.photos(); track photo.filepath; let position = $index) {
-      <ion-col size="6">
-        <button (click)="showActionSheet(photo, position)">
-          <img [src]="photo.webviewPath" [attr.alt]="'Photo ' + (position + 1)" loading="lazy" />
+  <ion-refresher slot="fixed" (ionRefresh)="recargar($event)">
+    <ion-refresher-content pullingText="Desliza para actualizar"
+                           refreshingSpinner="crescent"></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Aviso honesto: lo que se ve es de memoria, no del servidor -->
+  @if (sinConexion() && !vacia()) {
+    <div class="offline-note">
+      <ion-icon name="cloud-offline-outline"></ion-icon>
+      Mostrando tu colección guardada — sin conexión al servidor
+    </div>
+  }
+
+  <!-- ============ Colección vacía ============ -->
+  @if (vacia() && yaCargo()) {
+    <div class="empty">
+      <div class="empty-icon">
+        <ion-icon name="albums-outline"></ion-icon>
+      </div>
+      <h2>Tu colección está vacía</h2>
+      <p>Abre tu primer sobre y la carta que te toque aparecerá aquí.</p>
+      <button class="btn-cta" (click)="irASobres()">
+        <ion-icon name="gift-outline"></ion-icon>
+        Abrir un sobre
+      </button>
+    </div>
+  }
+
+  @if (!vacia()) {
+    <!-- ============ Resumen ============ -->
+    <section class="resumen">
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-num">{{ totalUnicas() }}</span>
+          <span class="stat-lbl">jugadores</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">{{ totalCartas() }}</span>
+          <span class="stat-lbl">cartas</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">{{ totalRepetidas() }}</span>
+          <span class="stat-lbl">repetidas</span>
+        </div>
+      </div>
+
+      <!-- Progreso general de la colección -->
+      <div class="progreso">
+        <div class="progreso-barra">
+          <div class="progreso-fill" [style.width.%]="progreso() * 100"></div>
+        </div>
+        <span class="progreso-txt">
+          {{ totalUnicas() }} de {{ totalJugadores() }} jugadores
+        </span>
+      </div>
+    </section>
+
+    <!-- ============ Filtros por rareza ============ -->
+    <div class="filtros">
+      <button class="chip chip-todas"
+              [class.chip-activo]="filtroRareza() === null"
+              (click)="filtrar(null)">
+        Todas
+      </button>
+      @for (r of rarezas; track r) {
+        <button class="chip {{ rareza(r).cssClass }}"
+                [class.chip-activo]="filtroRareza() === r"
+                (click)="filtrar(r)">
+          {{ rareza(r).label }}
+          <span class="chip-count">{{ porRareza()[r] || 0 }}/{{ metaDe(r) }}</span>
         </button>
-      </ion-col>
       }
-    </ion-row>
-  </ion-grid>
+    </div>
 
-  <ion-fab vertical="bottom" horizontal="center" slot="fixed">
-    <ion-fab-button (click)="addPhotoToGallery()">
-      <ion-icon name="camera"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
+    <!-- ============ Rejilla de cartas ============ -->
+    @if (filtroVacio()) {
+      <div class="sin-resultados">
+        <p>Todavía no tienes cartas de esta rareza.</p>
+        <button class="btn-link" (click)="filtrar(null)">Ver todas</button>
+      </div>
+    } @else {
+      <div class="grid">
+        @for (c of cartas(); track c.id) {
+          <button class="mini {{ rareza(c.rareza).cssClass }}"
+                  (click)="abrirDetalle(c)">
+
+            <!-- Contador de repetidas: solo aparece si de verdad hay más de una -->
+            @if (c.cantidad > 1) {
+              <span class="mini-dupe">×{{ c.cantidad }}</span>
+            }
+
+            <div class="mini-photo">
+              <div class="mini-initials">{{ iniciales(c.player_name) }}</div>
+              @if (hasImage(c.player_name)) {
+                <img [src]="getImage(c.player_name)"
+                     [alt]="c.player_name"
+                     loading="lazy"
+                     (error)="onImgError($event)"/>
+              }
+            </div>
+
+            <div class="mini-body">
+              <span class="mini-name">{{ c.player_name }}</span>
+              <span class="mini-team">{{ c.position }} · {{ c.team }}</span>
+            </div>
+
+            <div class="mini-bar"></div>
+          </button>
+        }
+      </div>
+    }
+  }
+
+  <!-- ============ Detalle de una carta ============ -->
+  <ion-modal [isOpen]="cartaAbierta() !== null"
+             (didDismiss)="cerrarDetalle()"
+             [initialBreakpoint]="0.72"
+             [breakpoints]="[0, 0.72, 0.95]"
+             class="detalle-modal">
+    <ng-template>
+      @if (cartaAbierta(); as c) {
+        <div class="detalle {{ rareza(c.rareza).cssClass }}">
+
+          <button class="detalle-cerrar" (click)="cerrarDetalle()">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+
+          <div class="detalle-card">
+            <div class="detalle-rareza">{{ rareza(c.rareza).label }}</div>
+            <div class="detalle-photo">
+              <div class="detalle-initials">{{ iniciales(c.player_name) }}</div>
+              @if (hasImage(c.player_name)) {
+                <img [src]="getImage(c.player_name)"
+                     [alt]="c.player_name"
+                     (error)="onImgError($event)"/>
+              }
+            </div>
+            <div class="detalle-body">
+              <h2>{{ c.player_name }}</h2>
+              <div class="detalle-meta">
+                <span class="chip-pos">{{ c.position }}</span>
+                <span>{{ c.team }}</span>
+              </div>
+              @if (puntos(c) > 0) {
+                <div class="detalle-pts">{{ puntos(c) }} <small>pts/sem</small></div>
+              }
+            </div>
+          </div>
+
+          <div class="detalle-info">
+            <div class="detalle-dato">
+              <span class="dato-lbl">Copias</span>
+              <span class="dato-val">{{ c.cantidad }}</span>
+            </div>
+            <div class="detalle-dato">
+              <span class="dato-lbl">Rareza</span>
+              <span class="dato-val">{{ rareza(c.rareza).label }}</span>
+            </div>
+            <div class="detalle-dato">
+              <span class="dato-lbl">Probabilidad</span>
+              <span class="dato-val">{{ rareza(c.rareza).probabilidad }}%</span>
+            </div>
+          </div>
+        </div>
+      }
+    </ng-template>
+  </ion-modal>
+
 </ion-content>

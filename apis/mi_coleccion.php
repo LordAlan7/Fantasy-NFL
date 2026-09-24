@@ -9,19 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-$host   = 'localhost';
-$dbname = 'login_db';
-$user   = 'root';
-$pass   = '';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "message" => "DB connection error"]);
-    exit();
-}
+// Conexion compartida: evita repetir usuario y contrasena en cada endpoint.
+require_once __DIR__ . '/config.php';
 
 $user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
 if (!$user_id) {
@@ -46,9 +35,21 @@ $stmt2 = $pdo->prepare("
 $stmt2->execute(['user_id' => $user_id]);
 $coleccion = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
+// Cuantos jugadores hay en juego, en total y por rareza, para que la app
+// pueda mostrar un progreso real ("tienes 3 de 7 epicas") en vez de estimarlo.
+$stmt3 = $pdo->query("SELECT rareza, COUNT(*) AS n FROM players WHERE estado = 'activo' GROUP BY rareza");
+$jugadores_por_rareza = [];
+$total_jugadores = 0;
+foreach ($stmt3->fetchAll() as $fila) {
+    $jugadores_por_rareza[$fila['rareza']] = (int)$fila['n'];
+    $total_jugadores += (int)$fila['n'];
+}
+
 echo json_encode([
-    "success"   => true,
-    "total"     => (int)$row['total'],
-    "coleccion" => $coleccion
+    "success"         => true,
+    "total"           => (int)$row['total'],   // cartas contando repetidas
+    "total_jugadores" => $total_jugadores,     // jugadores distintos que existen
+    "por_rareza"      => $jugadores_por_rareza, // cuantos hay de cada rareza
+    "coleccion"       => $coleccion
 ]);
 ?>

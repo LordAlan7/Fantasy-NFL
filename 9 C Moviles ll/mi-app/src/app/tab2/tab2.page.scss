@@ -1,16 +1,562 @@
-ion-col > button {
-  display: block;
-  width: 100%;
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  font: inherit;
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');
+
+/* ===========================================================================
+   Mi Coleccion
+   ---------------------------------------------------------------------------
+   Las cartas ganadas en "Abrir Sobres" aterrizan aqui. Comparte paleta y
+   fuente con tab3 para que se lea como la misma app.
+   ========================================================================= */
+
+$common:    #a0aec0;
+$rare:      #4299e1;
+$epic:      #9b59b6;
+$legendary: #f6c90e;
+$bg:        #0d0d1a;
+
+:host {
+  --ease-out:  cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-back: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --rarity: #a0aec0;
 }
 
-button img {
+ion-toolbar {
+  --background: #{$bg};
+  --color: #fff;
+}
+
+ion-content.coleccion-content {
+  --background: #{$bg};
+  --padding-bottom: 24px;
+  font-family: 'Outfit', sans-serif;
+}
+
+.btn-orden {
+  --color: #9fb0cc;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: none;
+}
+
+/* --- Aviso de sin conexion ------------------------------------------------ */
+
+.offline-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 10px 14px 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(246, 201, 14, 0.12);
+  border: 1px solid rgba(246, 201, 14, 0.28);
+  color: #f6c90e;
+  font-size: 0.75rem;
+  text-align: center;
+
+  ion-icon { font-size: 0.95rem; flex-shrink: 0; }
+}
+
+/* --- Estado vacio --------------------------------------------------------- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 18vh 34px 0;
+  animation: entrar 0.5s var(--ease-out);
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 1.22rem;
+    font-weight: 700;
+    color: #e8eefc;
+  }
+
+  p {
+    margin: 0 0 26px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: #7d8ca6;
+  }
+}
+
+.empty-icon {
+  width: 92px;
+  height: 92px;
+  margin-bottom: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+
+  ion-icon { font-size: 2.5rem; color: #4a5872; }
+}
+
+.btn-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 26px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #4299e1, #2563eb);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 22px -8px rgba(37, 99, 235, 0.9);
+  transition: transform 0.18s var(--ease-out);
+
+  &:active { transform: scale(0.97); }
+  ion-icon { font-size: 1.15rem; }
+}
+
+/* --- Resumen -------------------------------------------------------------- */
+
+.resumen {
+  padding: 16px 16px 4px;
+}
+
+.stats {
+  display: flex;
+  gap: 9px;
+}
+
+.stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 13px 6px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.stat-num {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #f2f6ff;
+  line-height: 1;
+}
+
+.stat-lbl {
+  font-size: 0.69rem;
+  color: #7d8ca6;
+  letter-spacing: 0.04em;
+}
+
+.progreso {
+  margin-top: 14px;
+}
+
+.progreso-barra {
+  height: 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.progreso-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #4299e1, #9b59b6, #f6c90e);
+  transition: width 0.7s var(--ease-out);
+}
+
+.progreso-txt {
   display: block;
+  margin-top: 7px;
+  font-size: 0.73rem;
+  color: #7d8ca6;
+  text-align: center;
+}
+
+/* --- Filtros -------------------------------------------------------------- */
+
+.filtros {
+  display: flex;
+  gap: 7px;
+  padding: 14px 16px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #9fb0cc;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.22s var(--ease-out),
+    border-color 0.22s var(--ease-out),
+    color 0.22s var(--ease-out),
+    transform 0.16s var(--ease-out);
+
+  &:active { transform: scale(0.95); }
+}
+
+.chip-count {
+  font-size: 0.68rem;
+  opacity: 0.65;
+  font-weight: 700;
+}
+
+/* El chip activo se tiñe del color de su propia rareza */
+.chip-activo {
+  color: #0c0f16;
+  background: var(--rarity);
+  border-color: var(--rarity);
+
+  .chip-count { opacity: 0.75; }
+}
+
+.chip-todas.chip-activo {
+  color: #0c0f16;
+  background: #e8eefc;
+  border-color: #e8eefc;
+}
+
+/* --- Rejilla -------------------------------------------------------------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(146px, 1fr));
+  gap: 11px;
+  padding: 4px 16px 20px;
+}
+
+.mini {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 15px;
+  overflow: hidden;
+  background: linear-gradient(165deg, #1a1f30 0%, #13161f 100%);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  /* Cada carta entra escalonada, no todas de golpe */
+  animation: entrarCarta 0.42s var(--ease-out) backwards;
+  transition:
+    transform 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
+
+  &:active {
+    transform: scale(0.96);
+    border-color: var(--rarity);
+    box-shadow: 0 0 20px -6px var(--rarity);
+  }
+}
+
+/* Escalona la entrada de las primeras: el resto ya llega con scroll */
+@for $i from 1 through 12 {
+  .mini:nth-child(#{$i}) { animation-delay: #{$i * 32}ms; }
+}
+
+.mini-dupe {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 2;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.mini-photo {
+  position: relative;
+  height: 112px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent);
+  overflow: hidden;
+
+  img {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+}
+
+/* Detras de la foto, por si la imagen no carga */
+.mini-initials {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.14);
+}
+
+.mini-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 10px 10px;
+}
+
+.mini-name {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: #eef3ff;
+  line-height: 1.22;
+  /* Nombres largos no deben romper la rejilla */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-team {
+  font-size: 0.68rem;
+  color: #74839c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Franja inferior con el color de la rareza: identifica de un vistazo */
+.mini-bar {
+  height: 3px;
+  background: var(--rarity);
+}
+
+/* --- Filtro sin resultados ------------------------------------------------ */
+
+.sin-resultados {
+  padding: 40px 30px;
+  text-align: center;
+
+  p { margin: 0 0 10px; color: #7d8ca6; font-size: 0.9rem; }
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #4299e1;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px;
+}
+
+/* --- Detalle en modal ----------------------------------------------------- */
+
+ion-modal.detalle-modal {
+  --background: #14161f;
+  --border-radius: 22px 22px 0 0;
+}
+
+.detalle {
+  position: relative;
+  height: 100%;
+  padding: 22px 20px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  overflow-y: auto;
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.05), transparent 60%);
+}
+
+.detalle-cerrar {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #9fb0cc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ion-icon { font-size: 1.2rem; }
+}
+
+.detalle-card {
+  width: 214px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(165deg, #1e2233 0%, #14161f 100%);
+  border: 2px solid var(--rarity);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 26px -8px var(--rarity);
+  animation: entrarDetalle 0.44s var(--ease-back);
+}
+
+.detalle-rareza {
+  padding: 6px;
+  text-align: center;
+  background: var(--rarity);
+  color: #0c0f16;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.detalle-photo {
+  position: relative;
+  height: 166px;
+  overflow: hidden;
+
+  img {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+}
+
+.detalle-initials {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.9rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.detalle-body {
+  padding: 12px 14px 15px;
+  text-align: center;
+
+  h2 {
+    margin: 0 0 7px;
+    font-size: 1.04rem;
+    font-weight: 700;
+    color: #f2f6ff;
+  }
+}
+
+.detalle-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.77rem;
+  color: #8fa0bb;
+}
+
+.chip-pos {
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.09);
+  color: #cfdcf3;
+  font-weight: 700;
+  font-size: 0.69rem;
+  letter-spacing: 0.05em;
+}
+
+.detalle-pts {
+  margin-top: 10px;
+  font-size: 1.28rem;
+  font-weight: 800;
+  color: var(--rarity);
+
+  small { font-size: 0.6rem; font-weight: 600; opacity: 0.7; }
+}
+
+.detalle-info {
+  display: flex;
   width: 100%;
-  height: auto;
+  max-width: 320px;
+  gap: 8px;
+}
+
+.detalle-dato {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 11px 6px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.dato-lbl {
+  font-size: 0.66rem;
+  color: #74839c;
+  letter-spacing: 0.03em;
+}
+
+.dato-val {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #eef3ff;
+}
+
+/* --- Keyframes ------------------------------------------------------------ */
+
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes entrarCarta {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes entrarDetalle {
+  from { opacity: 0; transform: translateY(20px) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Color de rareza por clase: CSS estatico, igual que en tab3, para que una
+   carta se vea del mismo color en las dos pantallas. */
+.rarity-common    { --rarity: #{$common}; }
+.rarity-rare      { --rarity: #{$rare}; }
+.rarity-epic      { --rarity: #{$epic}; }
+.rarity-legendary { --rarity: #{$legendary}; }
+
+/* --- Accesibilidad -------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .mini,
+  .empty,
+  .detalle-card {
+    animation: none !important;
+  }
+  .progreso-fill { transition: none; }
 }

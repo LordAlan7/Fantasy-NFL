@@ -1,367 +1,636 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');
 
+/* ===========================================================================
+   Abrir Sobres
+   ---------------------------------------------------------------------------
+   Toda la animacion se apoya en UNA sola escena (.stage) que cambia de clase
+   segun la fase. Cada capa declara su estado de reposo y deja que las
+   transiciones interpolen el resto: por eso no hay saltos entre pasos.
+
+   Regla: animar solo transform y opacity, que los compone la GPU. Nada de
+   animar width, top o box-shadow dentro del camino critico.
+   ========================================================================= */
+
 $common:    #a0aec0;
 $rare:      #4299e1;
 $epic:      #9b59b6;
 $legendary: #f6c90e;
+$bg:        #0d0d1a;
+
+:host {
+  --ease-out:  cubic-bezier(0.22, 1, 0.36, 1);     /* frenado suave */
+  --ease-in:   cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-back: cubic-bezier(0.34, 1.4, 0.64, 1);   /* rebote contenido */
+  --rarity: #{$common};   /* por defecto; lo pisa la clase .rarity-* */
+}
 
 ion-toolbar {
-  --background: #0d0d1a;
+  --background: #{$bg};
   --color: #fff;
 }
 
 ion-content.pack-content {
-  --background: #0d0d1a;
+  --background: radial-gradient(ellipse at 50% 20%, #1a1a2e 0%, #{$bg} 58%, #08080f 100%);
   font-family: 'Outfit', sans-serif;
 }
 
-// ─── Idle: Pack Scene ──────────────────────────────────────
-.pack-scene {
+/* --- Contador superior ---------------------------------------------------- */
+
+.hud {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 90vh;
+  gap: 14px;
+  padding: 14px 16px 0;
+  color: #8b95ad;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  transition: opacity 0.5s var(--ease-out);
+
+  strong { color: #e8eefc; font-weight: 700; }
+  ion-icon { font-size: 1rem; vertical-align: -2px; margin-right: 5px; opacity: 0.75; }
 }
 
-.pack-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 28px;
+/* Durante la animacion se apaga para no competir con la carta */
+.hud-dim { opacity: 0.25; }
+
+.hud-sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.14);
 }
 
-.pack-glow-ring {
-  position: absolute;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 220, 130, 0.15) 0%, transparent 70%);
-  animation: pulseRing 2.5s ease-in-out infinite;
-  pointer-events: none;
-}
+/* --- Escena --------------------------------------------------------------- */
 
-@keyframes pulseRing {
-  0%, 100% { transform: scale(1); opacity: 0.6; }
-  50% { transform: scale(1.15); opacity: 1; }
-}
-
-.pack-container {
+.stage {
   position: relative;
+  height: calc(100% - 150px);
+  min-height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   cursor: pointer;
-  width: 200px;
-
-  &:hover .pack-image {
-    transform: translateY(-8px) scale(1.04);
-    filter: drop-shadow(0 12px 32px rgba(0, 220, 130, 0.5));
-  }
-
-  &:active .pack-image {
-    transform: scale(0.96);
-  }
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  perspective: 1100px;
 }
 
-.pack-image {
-  width: 200px;
-  border-radius: 16px;
-  transition: transform 0.3s ease, filter 0.3s ease;
-  filter: drop-shadow(0 8px 24px rgba(0, 220, 130, 0.3));
-}
-
-.pack-overlay {
-  text-align: center;
-  margin-top: 14px;
-}
-
-.tap-label {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.85rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  animation: blink 2s ease-in-out infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-
-.pack-shake {
-  .pack-image {
-    animation: shake 0.4s ease;
-  }
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  20% { transform: translateX(-6px) rotate(-3deg); }
-  40% { transform: translateX(6px) rotate(3deg); }
-  60% { transform: translateX(-4px) rotate(-2deg); }
-  80% { transform: translateX(4px) rotate(2deg); }
-}
-
-.credits-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 30px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.9rem;
-
-  strong { color: #00dc82; }
-
-  .coins-icon { font-size: 1.1rem; }
-}
-
-// ─── Opening Scene ──────────────────────────────────────────
-.opening-scene {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 90vh;
-}
-
-.rarity-burst {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 200px;
-  height: 200px;
-
-  &.rarity-common   { --rarity-color: #{$common}; }
-  &.rarity-rare     { --rarity-color: #{$rare}; }
-  &.rarity-epic     { --rarity-color: #{$epic}; }
-  &.rarity-legendary { --rarity-color: #{$legendary}; }
-}
-
-.burst-ring {
+/* Capa 0 - aura de fondo, toma el color de la rareza al abrirse */
+.aura {
   position: absolute;
+  width: 320px;
+  height: 320px;
   border-radius: 50%;
-  border: 3px solid var(--rarity-color, #fff);
+  background: radial-gradient(circle, var(--rarity) 0%, transparent 68%);
   opacity: 0;
-  animation: burstExpand 1.8s ease-out infinite;
-
-  &.ring-1 { width: 80px; height: 80px; animation-delay: 0s; }
-  &.ring-2 { width: 140px; height: 140px; animation-delay: 0.3s; }
-  &.ring-3 { width: 200px; height: 200px; animation-delay: 0.6s; }
+  transform: scale(0.55);
+  filter: blur(34px);
+  transition: opacity 0.7s var(--ease-out), transform 0.9s var(--ease-out);
+  pointer-events: none;
 }
 
-@keyframes burstExpand {
-  0%   { transform: scale(0.2); opacity: 0.9; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
+/* --- Capa 1 - el sobre ---------------------------------------------------- */
 
-.rarity-label {
-  color: var(--rarity-color, #fff);
-  font-size: 1.6rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-align: center;
-  animation: labelPulse 0.5s ease-out;
-  text-shadow: 0 0 20px var(--rarity-color, #fff);
-}
-
-@keyframes labelPulse {
-  0% { transform: scale(0.3); opacity: 0; }
-  60% { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-// ─── Result Scene ───────────────────────────────────────────
-.result-scene {
+.pack {
+  position: relative;
+  width: 210px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 90vh;
-  padding: 20px;
+  transform-origin: center;
+  transition:
+    transform 0.55s var(--ease-out),
+    opacity 0.45s var(--ease-in),
+    filter 0.5s var(--ease-out);
+  will-change: transform, opacity;
 }
 
-.result-card-wrapper {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 24px;
-  
-  --rarity-color: #{$common};
-  &.rarity-rare      { --rarity-color: #{$rare}; }
-  &.rarity-epic      { --rarity-color: #{$epic}; }
-  &.rarity-legendary { --rarity-color: #{$legendary}; }
+.pack-img {
+  width: 100%;
+  display: block;
+  border-radius: 14px;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.6));
 }
 
-// Particles
-.particles-container {
+/* Anillo que respira alrededor del sobre en reposo */
+.pack-ring {
   position: absolute;
-  inset: 0;
+  inset: -26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out);
+}
+
+/* Linea de luz que recorre el sobre mientras carga: promete que algo viene */
+.pack-seal {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  top: 50%;
+  background: linear-gradient(90deg, transparent, #fff, transparent);
+  opacity: 0;
+  transform: scaleX(0.2);
+  border-radius: 3px;
+}
+
+/* --- Capa 2 - destello y rayos -------------------------------------------- */
+
+.flash {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--rarity) 40%, transparent 72%);
+  opacity: 0;
+  transform: scale(0.2);
   pointer-events: none;
-  overflow: visible;
+}
+
+.rays {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ray {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 130px;
+  margin-left: -1px;
+  background: linear-gradient(to top, transparent, var(--rarity));
+  transform-origin: 50% 0;
+  transform: rotate(calc(var(--i) * 45deg)) scaleY(0);
+  border-radius: 2px;
+}
+
+/* --- Capa 3 - particulas -------------------------------------------------- */
+
+.particles {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  pointer-events: none;
 }
 
 .particle {
   position: absolute;
-  top: 50%;
-  left: 50%;
   border-radius: 50%;
-  background: var(--rarity-color, #fff);
+  background: var(--rarity);
+  box-shadow: 0 0 9px var(--rarity);
   opacity: 0;
-  animation: particleFly 1.5s ease-out var(--delay, 0ms) forwards;
   transform: translate(-50%, -50%);
 }
 
-@keyframes particleFly {
-  0% {
-    opacity: 1;
-    transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateX(10px);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateX(var(--dist, 80px));
-  }
+/* --- Capa 4 - la carta ---------------------------------------------------- */
+
+.card-layer {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  /* Entra desde abajo y algo inclinada, como si saliera del sobre */
+  transform: translateY(46px) scale(0.86) rotateX(14deg);
+  transition:
+    opacity 0.5s var(--ease-out),
+    transform 0.78s var(--ease-back);
+  will-change: transform, opacity;
+  pointer-events: none;
 }
 
-// Player Card
-.player-card {
+.card {
   position: relative;
-  width: 260px;
-  background: linear-gradient(160deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
-  border: 2px solid var(--rarity-color, #fff);
+  width: 232px;
   border-radius: 20px;
   overflow: hidden;
+  background: linear-gradient(165deg, #1e2233 0%, #14161f 100%);
+  border: 2px solid var(--rarity);
   box-shadow:
-    0 0 30px rgba(255,255,255,0.05),
-    0 0 60px color-mix(in srgb, var(--rarity-color, #fff) 30%, transparent);
-  animation: cardReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 18px 44px rgba(0, 0, 0, 0.62),
+    0 0 30px -6px var(--rarity);
+  transition: filter 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out);
 }
 
-@keyframes cardReveal {
-  0% { transform: scale(0.3) rotateY(90deg); opacity: 0; }
-  100% { transform: scale(1) rotateY(0deg); opacity: 1; }
-}
-
-.card-rarity-banner {
-  padding: 8px 16px;
+.card-rarity {
   text-align: center;
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
+  padding: 7px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #0d0d1a;
-  background: var(--rarity-color, $common);
-
-  .rarity-common   & { color: #1a1a2e; }
+  color: #0c0f16;
+  background: var(--rarity);
 }
 
-.card-image-wrap {
+.card-photo {
+  position: relative;
+  height: 176px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent);
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 200px;
-  background: rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 
-.card-player-img {
+.card-img {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: top center;
 }
 
-.card-img-placeholder {
+/* Va DETRAS de la foto: si la imagen falla, ya hay algo digno debajo */
+.card-initials {
+  position: absolute;
+  inset: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  color: rgba(255,255,255,0.3);
-  font-size: 0.8rem;
-
-  .placeholder-emoji { font-size: 3rem; }
+  justify-content: center;
+  font-size: 3.1rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.16);
+  letter-spacing: 0.04em;
 }
 
-.card-info {
-  padding: 16px;
+.card-body {
+  padding: 13px 15px 16px;
   text-align: center;
 }
 
 .card-name {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: #fff;
-  margin: 0 0 6px;
-  line-height: 1.2;
+  margin: 0 0 7px;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #f2f6ff;
+  line-height: 1.25;
 }
 
 .card-meta {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.5);
-  margin-bottom: 8px;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #8fa0bb;
 }
 
-.card-position {
-  background: var(--rarity-color, #fff);
-  color: #0d0d1a;
-  font-weight: 700;
+.chip-pos {
   padding: 2px 8px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.09);
+  color: #cfdcf3;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
 }
 
 .card-pts {
-  font-size: 1.5rem;
+  margin-top: 11px;
+  font-size: 1.32rem;
   font-weight: 800;
-  color: var(--rarity-color, #fff);
+  color: var(--rarity);
+
+  small { font-size: 0.62rem; font-weight: 600; opacity: 0.7; letter-spacing: 0.05em; }
 }
 
+/* Brillo diagonal que cruza la carta una vez, al asentarse */
 .card-shine {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: -60%;
+  width: 45%;
+  height: 100%;
   background: linear-gradient(
-    135deg,
-    rgba(255,255,255,0.07) 0%,
-    transparent 50%,
-    rgba(255,255,255,0.03) 100%
+    100deg,
+    transparent,
+    rgba(255, 255, 255, 0.24),
+    transparent
   );
+  transform: skewX(-18deg);
+  opacity: 0;
   pointer-events: none;
 }
 
-// ─── Next Button ───────────────────────────────────────────
-.btn-next {
-  padding: 14px 36px;
-  border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #00dc82, #00b368);
-  color: #051018;
-  font-family: 'Outfit', sans-serif;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 20px rgba(0, 220, 130, 0.35);
+/* Las repetidas se ven a proposito mas apagadas que las nuevas */
+.card-dupe {
+  filter: saturate(0.6) brightness(0.86);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 14px 34px rgba(0, 0, 0, 0.55);
+}
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(0, 220, 130, 0.5);
+/* --- Sello NUEVA / REPETIDA ----------------------------------------------- */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 15px;
+  border-radius: 30px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.35s var(--ease-out), transform 0.45s var(--ease-back);
+
+  .badge-icon { font-size: 0.88rem; }
+}
+
+.status-badge.is-new {
+  color: #06210f;
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  box-shadow: 0 5px 20px -4px rgba(34, 197, 94, 0.75);
+}
+
+.status-badge.is-dupe {
+  color: #b9c6dd;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.result-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #8697b3;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease-out) 0.1s;
+
+  strong { color: #dbe6f8; }
+}
+
+/* --- Pista de interaccion ------------------------------------------------- */
+
+.hint {
+  position: absolute;
+  bottom: 14px;
+  margin: 0;
+  font-size: 0.83rem;
+  color: #7d8ca6;
+  letter-spacing: 0.03em;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease-out);
+}
+
+/* ===========================================================================
+   FASES
+   Cada bloque describe el estado de las capas en ese momento. La diferencia
+   entre un bloque y el siguiente es justo lo que el navegador interpola.
+   ========================================================================= */
+
+/* Reposo - el sobre flota y el anillo respira ------------------------------ */
+.fase-idle {
+  .pack      { animation: flotar 3.6s ease-in-out infinite; }
+  .pack-ring { opacity: 1; animation: respirar 3.2s ease-in-out infinite; }
+  .hint      { opacity: 1; animation: parpadeo 2.6s ease-in-out infinite; }
+}
+
+/* Carga - tension que sube: el sobre se encoge y vibra ---------------------- */
+.fase-cargando {
+  .aura      { opacity: 0.42; transform: scale(1); }
+  .pack      { animation: cargar 1.1s var(--ease-in) forwards; }
+  .pack-ring { opacity: 1; animation: anilloCerrar 1.1s var(--ease-in) forwards; }
+  .pack-seal { animation: sello 1.1s ease-in-out; }
+  .hint      { opacity: 0.85; }
+}
+
+/* Apertura - el sobre se va en un destello ---------------------------------- */
+.fase-abriendo {
+  .aura  { opacity: 0.85; transform: scale(1.5); }
+  .pack  { opacity: 0; transform: scale(1.5); filter: blur(9px) brightness(2.4); }
+  .flash { animation: destello 0.62s var(--ease-out) forwards; }
+  .rays  { opacity: 1; }
+  .ray   { animation: rayo 0.62s var(--ease-out) forwards; }
+  .hint  { opacity: 0; }
+}
+
+/* Revelado - la carta sube desde la luz ------------------------------------- */
+.fase-revelando {
+  .aura       { opacity: 0.5; transform: scale(1.25); }
+  .pack       { opacity: 0; transform: scale(1.6); }
+  .rays       { opacity: 0; transition: opacity 0.5s var(--ease-out); }
+  .particle   { animation: volar 1.35s var(--ease-out) var(--delay) forwards; }
+  .card-layer { opacity: 1; transform: translateY(0) scale(1) rotateX(0deg); }
+  .hint       { opacity: 0; }
+}
+
+/* Final - todo asentado, la carta ya es legible ----------------------------- */
+.fase-listo {
+  .aura         { opacity: 0.4; transform: scale(1.2); }
+  .pack         { opacity: 0; transform: scale(1.6); }
+  .card-layer   { opacity: 1; transform: translateY(0) scale(1) rotateX(0deg); pointer-events: auto; }
+  .status-badge { opacity: 1; transform: scale(1); }
+  .result-note  { opacity: 1; }
+  .card-shine   { animation: brillo 1.1s var(--ease-out) 0.15s; }
+  .hint         { opacity: 0; }
+}
+
+/* Solo las NUEVAS reciben latido. La diferencia se percibe antes de leer. */
+.fase-listo .status-badge.is-new {
+  animation: latido 2.4s ease-in-out 0.5s infinite;
+}
+
+/* --- Keyframes ------------------------------------------------------------ */
+
+@keyframes flotar {
+  0%, 100% { transform: translateY(0) rotate(-0.6deg); }
+  50%      { transform: translateY(-11px) rotate(0.6deg); }
+}
+
+@keyframes respirar {
+  0%, 100% { transform: scale(1);    opacity: 0.5; }
+  50%      { transform: scale(1.07); opacity: 0.16; }
+}
+
+@keyframes parpadeo {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+
+/* La vibracion CRECE en amplitud en vez de sacudir parejo: se lee como
+   energia acumulandose, no como un error de la app. */
+@keyframes cargar {
+  0%   { transform: translateX(0)    scale(1); }
+  20%  { transform: translateX(-2px) scale(0.985); }
+  40%  { transform: translateX(3px)  scale(0.97); }
+  60%  { transform: translateX(-5px) scale(0.955); }
+  80%  { transform: translateX(6px)  scale(0.945); }
+  100% { transform: translateX(0)    scale(1.06); }
+}
+
+@keyframes anilloCerrar {
+  0%   { transform: scale(1);    opacity: 0.4; border-color: rgba(255, 255, 255, 0.1); }
+  100% { transform: scale(0.72); opacity: 1;   border-color: var(--rarity); }
+}
+
+@keyframes sello {
+  0%   { opacity: 0; transform: scaleX(0.2); }
+  45%  { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1.1); }
+}
+
+@keyframes destello {
+  0%   { opacity: 0; transform: scale(0.2); }
+  28%  { opacity: 1; transform: scale(1.25); }
+  100% { opacity: 0; transform: scale(2.6); }
+}
+
+@keyframes rayo {
+  0%   { transform: rotate(calc(var(--i) * 45deg)) scaleY(0);   opacity: 0; }
+  35%  { opacity: 0.9; }
+  100% { transform: rotate(calc(var(--i) * 45deg)) scaleY(1.5); opacity: 0; }
+}
+
+@keyframes volar {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0) scale(0.4);
+  }
+  18% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(var(--dist) * -1)) scale(0.25);
   }
 }
 
-// ─── Error Banner ──────────────────────────────────────────
+@keyframes brillo {
+  0%   { left: -60%; opacity: 0; }
+  22%  { opacity: 1; }
+  100% { left: 125%; opacity: 0; }
+}
+
+@keyframes latido {
+  0%, 100% { box-shadow: 0 5px 20px -4px rgba(34, 197, 94, 0.75); }
+  50%      { box-shadow: 0 5px 28px 0   rgba(34, 197, 94, 0.95); }
+}
+
+/* --- Acciones ------------------------------------------------------------- */
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 0 24px 22px;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.45s var(--ease-out), transform 0.45s var(--ease-out);
+  pointer-events: none;
+}
+
+.actions-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.18s var(--ease-out), filter 0.18s var(--ease-out);
+
+  &:active { transform: scale(0.97); filter: brightness(1.12); }
+  &:disabled { cursor: default; }
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4299e1, #2563eb);
+  color: #fff;
+  box-shadow: 0 8px 22px -8px rgba(37, 99, 235, 0.9);
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.07);
+  color: #cbd8ee;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  ion-icon { font-size: 1.05rem; }
+}
+
+/* --- Error ---------------------------------------------------------------- */
+
 .error-banner {
   position: fixed;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #c0392b;
+  left: 16px;
+  right: 16px;
+  bottom: 84px;
+  padding: 13px 16px;
+  border-radius: 13px;
+  background: rgba(220, 38, 38, 0.95);
   color: #fff;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  z-index: 99;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  font-size: 0.87rem;
+  text-align: center;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  animation: subirError 0.34s var(--ease-back);
+  z-index: 50;
+}
+
+@keyframes subirError {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===========================================================================
+   Color de rareza y geometria de las particulas.
+   Todo esto es CSS estatico a proposito: las custom properties se definen por
+   clase y por nth-child, no se inyectan desde Angular. Asi el color y el
+   movimiento no dependen de como el framework serialice un binding de estilo.
+   ========================================================================= */
+
+.rarity-common    { --rarity: #{$common}; }
+.rarity-rare      { --rarity: #{$rare}; }
+.rarity-epic      { --rarity: #{$epic}; }
+.rarity-legendary { --rarity: #{$legendary}; }
+
+/* Los 8 rayos del destello, repartidos cada 45 grados */
+@for $i from 1 through 8 {
+  .ray:nth-child(#{$i}) { --i: #{$i}; }
+}
+
+/* Las 22 particulas: angulo repartido en circulo, con distancia, tamano y
+   retraso variados para que no salgan todas iguales ni a la vez. */
+@for $i from 1 through 22 {
+  .particle:nth-child(#{$i}) {
+    $tam: 4 + (($i * 13) % 7);
+    --angle: #{($i - 1) * 16.36}deg;
+    --dist:  #{90 + (($i * 37) % 70)}px;
+    --delay: #{($i - 1) * 28}ms;
+    width:  #{$tam}px;
+    height: #{$tam}px;
+  }
+}
+
+/* ===========================================================================
+   Accesibilidad - quien pidio menos movimiento recibe los mismos estados,
+   sin recorrido. La informacion nunca depende de la animacion.
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .stage *,
+  .actions,
+  .btn {
+    animation: none !important;
+    transition-duration: 0.12s !important;
+  }
+  .card-layer { transform: none; }
+  .particles, .rays, .flash { display: none; }
 }

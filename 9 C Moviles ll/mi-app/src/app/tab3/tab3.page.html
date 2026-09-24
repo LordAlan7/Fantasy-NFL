@@ -1,93 +1,137 @@
-<ion-header [translucent]="true">
+<ion-header [translucent]="true" class="pack-header">
   <ion-toolbar color="dark">
-    <ion-title>🃏 Abrir Sobres</ion-title>
+    <ion-title>Abrir Sobres</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true" class="pack-content">
 
-  <!-- Idle state: show the pack -->
-  @if (estado === 'idle') {
-    <div class="pack-scene">
-      <div class="pack-area">
-        <div class="pack-glow-ring"></div>
-        <div class="pack-container" (click)="abrirSobre()" [class.pack-shake]="shaking">
-          <img src="assets/images/ui/sobresNFL.png" alt="Sobre NFL" class="pack-image"/>
-          <div class="pack-overlay">
-            <p class="tap-label">Toca para abrir</p>
-          </div>
-        </div>
-        <div class="credits-info">
-          <span class="coins-icon">🏈</span>
-          <span>Tus cartas: <strong>{{ totalCartas }}</strong></span>
-        </div>
-      </div>
+  <!-- Contador siempre visible: da contexto sin robar protagonismo -->
+  <div class="hud" [class.hud-dim]="animando()">
+    <div class="hud-item">
+      <ion-icon name="layers-outline"></ion-icon>
+      <span><strong>{{ totalCartas() }}</strong> cartas</span>
     </div>
-  }
-
-  <!-- Opening animation: spinning rarity reveal -->
-  @if (estado === 'opening') {
-    <div class="opening-scene">
-      <div class="rarity-burst {{ rarityClass }}">
-        <div class="burst-ring ring-1"></div>
-        <div class="burst-ring ring-2"></div>
-        <div class="burst-ring ring-3"></div>
-        <div class="rarity-label">{{ rarityLabel }}</div>
-      </div>
+    <div class="hud-sep"></div>
+    <div class="hud-item">
+      <ion-icon name="sparkles-outline"></ion-icon>
+      <span><strong>{{ totalUnicas() }}</strong>/{{ totalJugadores() }} jugadores</span>
     </div>
-  }
+  </div>
 
-  <!-- Result: player card reveal -->
-  @if (estado === 'result' && jugadorObtenido) {
-    <div class="result-scene">
-      <div class="result-card-wrapper {{ rarityClass }}">
-        <!-- Ambient particles -->
-        <div class="particles-container">
-          @for (_ of particles; track $index) {
-            <div class="particle" [style]="particleStyle($index)"></div>
+  <!--
+    Una sola escena para todas las fases. La clase fase-* manda, y cada capa
+    entra y sale con su propia transición: nada se destruye a media animación,
+    que es lo que hacía que los pasos se sintieran cortados.
+  -->
+  <div
+    class="stage {{ 'fase-' + fase() }} {{ rareza().cssClass }}"
+    (click)="onTap()">
+
+    <!-- Capa 0 · aura de fondo, toma el color de la rareza al abrirse -->
+    <div class="aura"></div>
+
+    <!-- Capa 1 · el sobre -->
+    <div class="pack">
+      <div class="pack-ring"></div>
+      <img src="assets/images/ui/sobresNFL.png" alt="Sobre NFL" class="pack-img"/>
+      <div class="pack-seal"></div>
+    </div>
+
+    <!-- Capa 2 · destello y rayos del color de la rareza -->
+    <div class="flash"></div>
+    <div class="rays">
+      @for (r of [1,2,3,4,5,6,7,8]; track r) { <span class="ray"></span> }
+    </div>
+
+    <!-- Capa 3 · partículas, solo cuando ya hay carta -->
+    <div class="particles">
+      @for (p of particulas; track $index) {
+        <div class="particle"></div>
+      }
+    </div>
+
+    <!-- Capa 4 · la carta. Se monta en cuanto se conoce el jugador, para que
+         pueda entrar con transición en vez de aparecer ya puesta. -->
+    @if (jugador(); as j) {
+      <div class="card-layer">
+
+        <!-- Sello de nueva o repetida: la diferencia de un vistazo -->
+        <div class="status-badge" [class.is-new]="esNueva()" [class.is-dupe]="!esNueva()">
+          @if (esNueva()) {
+            <span class="badge-icon">✦</span>
+            <span class="badge-text">¡NUEVA!</span>
+          } @else {
+            <span class="badge-icon">×{{ cantidad() }}</span>
+            <span class="badge-text">REPETIDA</span>
           }
         </div>
 
-        <!-- The card itself -->
-        <div class="player-card">
-          <div class="card-rarity-banner {{ rarityClass }}">
-            {{ rarityLabel }}
-          </div>
-          <div class="card-image-wrap">
-            @if (hasImage(jugadorObtenido.player_name)) {
-              <img [src]="getPlayerImage(jugadorObtenido.player_name)"
-                   [alt]="jugadorObtenido.player_name"
-                   class="card-player-img"
+        <div class="card" [class.card-dupe]="!esNueva()">
+          <div class="card-rarity">{{ rareza().label }}</div>
+
+          <div class="card-photo">
+            @if (hasImage(j.player_name)) {
+              <div class="card-initials">{{ iniciales(j.player_name) }}</div>
+              <img [src]="getImage(j.player_name)"
+                   [alt]="j.player_name"
+                   class="card-img"
                    (error)="onImgError($event)"/>
             } @else {
-              <div class="card-img-placeholder">
-                <span class="placeholder-emoji">🏈</span>
-              </div>
+              <div class="card-initials">{{ iniciales(j.player_name) }}</div>
             }
           </div>
-          <div class="card-info">
-            <h2 class="card-name">{{ jugadorObtenido.player_name }}</h2>
+
+          <div class="card-body">
+            <h2 class="card-name">{{ j.player_name }}</h2>
             <div class="card-meta">
-              <span class="card-position">{{ jugadorObtenido.position }}</span>
-              <span class="card-team">{{ jugadorObtenido.team }}</span>
+              <span class="chip-pos">{{ j.position }}</span>
+              <span class="card-team">{{ j.team }}</span>
             </div>
-            @if (jugadorObtenido.puntos_semana) {
-              <div class="card-pts">{{ jugadorObtenido.puntos_semana }} pts</div>
+            @if (puntos(j) > 0) {
+              <div class="card-pts">{{ puntos(j) }} <small>pts/sem</small></div>
             }
           </div>
+
           <div class="card-shine"></div>
         </div>
 
-        <button class="btn-next" (click)="resetear()">
-          Abrir otro sobre
-        </button>
+        <!-- Mensaje que explica qué pasó con la carta -->
+        <p class="result-note">
+          @if (esNueva()) {
+            Se añadió a tu colección
+          } @else {
+            Ya la tenías · ahora tienes <strong>{{ cantidad() }}</strong>
+          }
+        </p>
       </div>
-    </div>
-  }
+    }
 
-  <!-- Error toast inline -->
-  @if (mensajeError) {
-    <div class="error-banner">{{ mensajeError }}</div>
+    <!-- Pista de interacción, distinta según la fase -->
+    <p class="hint">
+      @switch (fase()) {
+        @case ('idle')      { Toca el sobre para abrirlo }
+        @case ('cargando')  { Abriendo… }
+        @case ('abriendo')  { &nbsp; }
+        @case ('revelando') { &nbsp; }
+        @default            { &nbsp; }
+      }
+    </p>
+  </div>
+
+  <!-- Acciones: aparecen solo cuando la carta ya se asentó -->
+  <div class="actions" [class.actions-visible]="fase() === 'listo'">
+    <button class="btn btn-primary" (click)="otroSobre()" [disabled]="fase() !== 'listo'">
+      Abrir otro sobre
+    </button>
+    <button class="btn btn-ghost" (click)="irAColeccion()" [disabled]="fase() !== 'listo'">
+      <ion-icon name="albums-outline"></ion-icon>
+      Ver mi colección
+    </button>
+  </div>
+
+  @if (mensajeError()) {
+    <div class="error-banner">{{ mensajeError() }}</div>
   }
 
 </ion-content>
